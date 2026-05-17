@@ -2,7 +2,7 @@
 param baseName string = 'invledger'
 
 @description('Azure region for all resources')
-param location string = 'australiaeast'
+param location string = 'swedencentral'
 
 @description('Principal object IDs to grant access to deployed resources')
 param principals array = []

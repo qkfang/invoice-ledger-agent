@@ -1,8 +1,8 @@
-using FxAgent.Agents;
-using FxAgent.Services;
+using InvLedgerAgent.Agents;
+using InvLedgerAgent.Services;
 using System.Text.Json;
 
-namespace FxAgent.Api;
+namespace InvLedgerAgent.Api;
 
 record NoticeUrlRequest(string Url);
 record NoticeTextRequest(string Text);

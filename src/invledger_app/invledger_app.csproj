@@ -4,8 +4,8 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <NoWarn>OPENAI001;SCME0001</NoWarn>
-        <RootNamespace>FxAgent</RootNamespace>
-        <AssemblyName>invledger</AssemblyName>
+        <RootNamespace>InvLedgerAgent</RootNamespace>
+        <AssemblyName>invledger_app</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>

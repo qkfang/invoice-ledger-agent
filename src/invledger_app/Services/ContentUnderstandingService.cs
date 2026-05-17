@@ -4,7 +4,7 @@ using Azure.AI.ContentUnderstanding;
 using Azure.Core;
 using Microsoft.Extensions.Logging;
 
-namespace FxAgent.Services;
+namespace InvLedgerAgent.Services;
 
 public record ContentUnderstandingResult(string Markdown, string Json);
 

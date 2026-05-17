@@ -2,7 +2,7 @@ using Azure.AI.Projects;
 using Microsoft.Extensions.Logging;
 using OpenAI.Responses;
 
-namespace FxAgent.Agents;
+namespace InvLedgerAgent.Agents;
 
 public class InvLdgAgException : BaseAgent
 {

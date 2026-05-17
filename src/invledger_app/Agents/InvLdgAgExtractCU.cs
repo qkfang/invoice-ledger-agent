@@ -1,7 +1,7 @@
 using Azure.AI.Projects;
 using Microsoft.Extensions.Logging;
 
-namespace FxAgent.Agents;
+namespace InvLedgerAgent.Agents;
 
 public class InvLdgAgExtractCU : BaseAgent
 {

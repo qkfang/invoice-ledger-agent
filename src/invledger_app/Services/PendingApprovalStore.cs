@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace FxAgent.Services;
+namespace InvLedgerAgent.Services;
 
 public class PendingApprovalStore
 {

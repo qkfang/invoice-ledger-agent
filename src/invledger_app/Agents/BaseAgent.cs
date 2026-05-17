@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using OpenAI.Responses;
 using System.Diagnostics;
 
-namespace FxAgent.Agents;
+namespace InvLedgerAgent.Agents;
 
 public record PendingToolApproval(string ResponseId, string ApprovalItemId, string ServerLabel);
 

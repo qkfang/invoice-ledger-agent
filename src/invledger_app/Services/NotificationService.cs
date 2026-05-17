@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Logging;
 
-namespace FxAgent.Services;
+namespace InvLedgerAgent.Services;
 
 public class NotificationService
 {

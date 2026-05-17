@@ -4,7 +4,7 @@ using Azure.AI.DocumentIntelligence;
 using Azure.Core;
 using Microsoft.Extensions.Logging;
 
-namespace FxAgent.Services;
+namespace InvLedgerAgent.Services;
 
 public record DocIntelligenceResult(string Markdown, string Json);
 

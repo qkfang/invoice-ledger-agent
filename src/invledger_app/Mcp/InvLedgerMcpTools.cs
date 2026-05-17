@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using System.Text.Json;
-using FxAgent.Services;
+using InvLedgerAgent.Services;
 using ModelContextProtocol.Server;
 
-namespace FxAgent.Mcp;
+namespace InvLedgerAgent.Mcp;
 
 [McpServerToolType]
 public class InvLedgerMcpTools

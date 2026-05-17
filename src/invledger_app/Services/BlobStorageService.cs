@@ -2,7 +2,7 @@ using Azure.Core;
 using Azure.Storage.Blobs;
 using Microsoft.Extensions.Logging;
 
-namespace FxAgent.Services;
+namespace InvLedgerAgent.Services;
 
 public class BlobStorageService
 {

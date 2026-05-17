@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
-namespace FxAgent.Services;
+namespace InvLedgerAgent.Services;
 
 public record LedgerEntry(
     string Id,
