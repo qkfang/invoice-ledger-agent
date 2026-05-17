@@ -3,35 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Notice Intelligence</title>
+  <title>Invoice Ledger Workspace</title>
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
   <main>
-    <h1>Notice Intelligence Workspace</h1>
-    <div class="subtitle">Agent-assisted handling of tax and government notices end-to-end.</div>
+    <h1>Invoice Ledger Workspace</h1>
+    <div class="subtitle">Agent-assisted invoice processing from ingestion through ledger posting.</div>
 
     <div class="grid-3">
-      <a class="card" href="pages/extract-di.html" style="text-decoration:none;color:inherit;">
-        <h3>Extract (DI)</h3>
-        <p style="color:var(--muted);font-size:0.88rem;">Extract structured fields using Azure Document Intelligence preprocessing.</p>
+      <a class="card" href="pages/ingestion.html" style="text-decoration:none;color:inherit;">
+        <h3>Ingestion</h3>
+        <p style="color:var(--muted);font-size:0.88rem;">Ingestion agent receives incoming vendor invoice documents into the inbox.</p>
       </a>
-      <a class="card" href="pages/extract-cu.html" style="text-decoration:none;color:inherit;">
-        <h3>Extract (CU)</h3>
-        <p style="color:var(--muted);font-size:0.88rem;">Extract structured fields using contextual document understanding.</p>
+      <a class="card" href="pages/invoice.html" style="text-decoration:none;color:inherit;">
+        <h3>Invoice</h3>
+        <p style="color:var(--muted);font-size:0.88rem;">Invoice agent extracts invoice details and line items from the ingested documents.</p>
       </a>
-      <a class="card" href="pages/notification.html" style="text-decoration:none;color:inherit;">
-        <h3>Notification Agent</h3>
-        <p style="color:var(--muted);font-size:0.88rem;">Default assignment rules, automated emails, and reminders.</p>
+      <a class="card" href="pages/processing.html" style="text-decoration:none;color:inherit;">
+        <h3>Processing</h3>
+        <p style="color:var(--muted);font-size:0.88rem;">Processing agent matches line items to the ledger using category, sub-item and dollar rules.</p>
       </a>
-      <a class="card" href="pages/correspondence.html" style="text-decoration:none;color:inherit;">
-        <h3>Correspondence Agent</h3>
-        <p style="color:var(--muted);font-size:0.88rem;">Drafts response letters and emails for any notice.</p>
+      <a class="card" href="pages/exception.html" style="text-decoration:none;color:inherit;">
+        <h3>Exception</h3>
+        <p style="color:var(--muted);font-size:0.88rem;">Exception agent routes unmatched items to the responsible human team.</p>
+      </a>
+      <a class="card" href="pages/ledger.html" style="text-decoration:none;color:inherit;">
+        <h3>Ledger</h3>
+        <p style="color:var(--muted);font-size:0.88rem;">Approved ledger categories and items. Ask the ledger agent questions.</p>
       </a>
     </div>
   </main>
 
-  <script src="assets/app.js?v=20260506"></script>
+  <script src="assets/app.js?v=20260517"></script>
   <script>renderHeader('Home');</script>
 </body>
 </html>

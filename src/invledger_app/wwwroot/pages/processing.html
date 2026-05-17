@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Processing Agent</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    table.data { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .summary-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .summary-pill { background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; min-width: 120px; }
+    .summary-pill .n { font-size: 1.4rem; font-weight: 700; }
+    .summary-pill .l { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .notes-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 0.85rem; white-space: pre-wrap; margin-top: 8px; font-family: ui-monospace, Menlo, monospace; }
+    .rule-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: #eef2ff; color: var(--primary); }
+    .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Processing Screen</h1>
+    <div class="subtitle">The processing agent matches each invoice line item against the approved ledger using category, sub-item and dollar checks.</div>
+
+    <div class="card agent-card">
+      <h2>Processing Agent</h2>
+      <div class="subtitle" style="margin:0;">Applies the matching rules below. Items matching all checks are auto-approved. Items outside tolerance or above the high-value threshold are flagged for human review. Items with no ledger category or sub-item are sent to the exception queue.</div>
+    </div>
+
+    <div class="card">
+      <h2>Matching Rules</h2>
+      <div id="rules-area"><div class="empty">Loading...</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Run Processing</h2>
+      <div class="row">
+        <label for="invoice-select">Invoice</label>
+        <select id="invoice-select"></select>
+      </div>
+      <button id="btn-run">Run Processing Agent</button>
+    </div>
+
+    <div class="card">
+      <h2>Result</h2>
+      <div id="result-area"><div class="empty">Run processing to see results.</div></div>
+    </div>
+  </main>
+
+  <script src="../assets/app.js?v=20260517"></script>
+  <script src="../assets/workflow.js?v=20260517"></script>
+  <script>
+    renderHeader('Processing');
+
+    let invoices = [], ledger = null, rules = [];
+
+    function renderRules() {
+      const rows = rules.map(r => `
+        <tr>
+          <td><span class="rule-pill">${esc(r.id)}</span></td>
+          <td><strong>${esc(r.name)}</strong></td>
+          <td>${esc(r.description)}</td>
+          <td>${statusBadge(r.outcome)}</td>
+        </tr>`).join('');
+      document.getElementById('rules-area').innerHTML = `
+        <table class="data">
+          <thead><tr><th style="width:60px;">ID</th><th style="width:220px;">Name</th><th>Condition</th><th style="width:120px;">Outcome</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    function renderInvoiceOptions() {
+      document.getElementById('invoice-select').innerHTML = invoices.map(i =>
+        `<option value="${esc(i.invoiceId)}">${esc(i.invoiceId)} — ${esc(i.vendorName)} (${fmtMoney(i.totalAmount, i.currency)})</option>`
+      ).join('');
+    }
+
+    function renderResult(invoice, result) {
+      const rows = result.results.map(r => `
+        <tr>
+          <td>${esc(r.categoryName)}</td>
+          <td>${esc(r.description)}</td>
+          <td>${fmtMoney(r.unitPrice, invoice.currency)}</td>
+          <td>${fmtMoney(r.lineTotal, invoice.currency)}</td>
+          <td>${esc(r.matchedLedgerCategory)} / ${esc(r.matchedLedgerItem)}</td>
+          <td><span class="rule-pill">${esc(r.ruleApplied)}</span></td>
+          <td>${statusBadge(r.status)}${r.humanInLoop ? ' <span class="rule-pill" style="background:#fef3c7;color:#92400e;">HITL</span>' : ''}</td>
+          <td style="color:var(--muted);">${esc(r.reason)}</td>
+        </tr>`).join('');
+
+      document.getElementById('result-area').innerHTML = `
+        <div class="summary-row">
+          <div class="summary-pill"><div class="n">${result.summary.totalProcessed}</div><div class="l">Processed</div></div>
+          <div class="summary-pill"><div class="n" style="color:#166534;">${result.summary.matched}</div><div class="l">Matched</div></div>
+          <div class="summary-pill"><div class="n" style="color:#92400e;">${result.summary.review}</div><div class="l">Review</div></div>
+          <div class="summary-pill"><div class="n" style="color:#991b1b;">${result.summary.exception}</div><div class="l">Exception</div></div>
+        </div>
+        <table class="data">
+          <thead><tr>
+            <th>Category</th><th>Description</th><th>Unit Price</th><th>Line Total</th>
+            <th>Ledger Match</th><th>Rule</th><th>Status</th><th>Reason</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <h3 style="margin-top:14px;font-size:0.9rem;">Agent notes</h3>
+        <div class="notes-box">${esc(result.notes)}</div>`;
+    }
+
+    document.getElementById('btn-run').addEventListener('click', () => {
+      const id = document.getElementById('invoice-select').value;
+      const inv = invoices.find(i => i.invoiceId === id);
+      if (!inv) return;
+      const result = processInvoice(inv, ledger, rules);
+      renderResult(inv, result);
+    });
+
+    (async () => {
+      try {
+        const data = await loadWorkflowData();
+        invoices = data.invoices; ledger = data.ledger; rules = data.rules;
+        renderRules(); renderInvoiceOptions();
+      } catch (err) {
+        document.getElementById('rules-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

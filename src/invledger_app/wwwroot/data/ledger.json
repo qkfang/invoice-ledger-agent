@@ -1,0 +1,62 @@
+{
+  "currency": "USD",
+  "categories": [
+    {
+      "categoryName": "Office Supplies",
+      "ledgerCode": "6000",
+      "approvedBudget": 12000.00,
+      "ytdBalance": 4520.75,
+      "items": [
+        { "itemName": "A4 Paper (case)", "expectedUnitPrice": 40.00, "aliases": ["A4 Paper", "Copy Paper"] },
+        { "itemName": "Printer Toner Cartridge", "expectedUnitPrice": 220.00, "aliases": ["Toner", "Toner Cartridge"] },
+        { "itemName": "Pens & Stationery", "expectedUnitPrice": 25.00, "aliases": ["Stationery"] }
+      ]
+    },
+    {
+      "categoryName": "IT Equipment",
+      "ledgerCode": "6100",
+      "approvedBudget": 35000.00,
+      "ytdBalance": 18750.00,
+      "items": [
+        { "itemName": "USB-C Docking Station", "expectedUnitPrice": 290.00, "aliases": ["Docking Station", "USB Dock"] },
+        { "itemName": "Laptop", "expectedUnitPrice": 1800.00, "aliases": ["Notebook", "Workstation Laptop"] },
+        { "itemName": "Monitor", "expectedUnitPrice": 380.00, "aliases": ["Display", "External Monitor"] }
+      ]
+    },
+    {
+      "categoryName": "Professional Services",
+      "ledgerCode": "6200",
+      "approvedBudget": 80000.00,
+      "ytdBalance": 22500.00,
+      "items": [
+        { "itemName": "Solution Architecture Review", "expectedUnitPrice": 250.00, "aliases": ["Architecture Review", "Solution Review"] },
+        { "itemName": "Onsite Workshop Facilitation", "expectedUnitPrice": 250.00, "aliases": ["Workshop", "Facilitation"] }
+      ]
+    },
+    {
+      "categoryName": "Travel",
+      "ledgerCode": "6300",
+      "approvedBudget": 20000.00,
+      "ytdBalance": 6820.00,
+      "items": [
+        { "itemName": "Air Travel (economy)", "expectedUnitPrice": 450.00, "aliases": ["Flight", "Airfare"] },
+        { "itemName": "Hotel Accommodation (per night)", "expectedUnitPrice": 140.00, "aliases": ["Hotel", "Lodging"] },
+        { "itemName": "Meals", "expectedUnitPrice": 45.00, "aliases": ["Per Diem"] }
+      ]
+    },
+    {
+      "categoryName": "Shipping & Freight",
+      "ledgerCode": "6400",
+      "approvedBudget": 15000.00,
+      "ytdBalance": 4210.00,
+      "items": [
+        { "itemName": "Domestic Freight", "expectedUnitPrice": 175.00, "aliases": ["Freight"] },
+        { "itemName": "Express Courier", "expectedUnitPrice": 95.00, "aliases": ["Courier", "Overnight"] }
+      ]
+    }
+  ],
+  "postedEntries": [
+    { "entryId": "GL-5001", "invoiceId": "INV-2026-0000", "vendorName": "Northwind Office Supplies", "category": "Office Supplies", "item": "A4 Paper (case)", "amount": 200.00, "postedDate": "2026-04-22", "status": "posted" },
+    { "entryId": "GL-5002", "invoiceId": "INV-2026-0000", "vendorName": "Globex Consulting", "category": "Professional Services", "item": "Solution Architecture Review", "amount": 5000.00, "postedDate": "2026-04-28", "status": "posted" }
+  ]
+}

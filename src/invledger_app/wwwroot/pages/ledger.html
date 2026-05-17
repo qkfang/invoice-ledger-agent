@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ledger Agent</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    table.data { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .cat-block { margin-top: 14px; }
+    .cat-block h3 { font-size: 0.95rem; margin-bottom: 6px; }
+    .cat-meta { color: var(--muted); font-weight: 400; font-size: 0.85rem; margin-left: 6px; }
+    .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
+    .qa-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 0.88rem; margin-top: 8px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Ledger Screen</h1>
+    <div class="subtitle">Approved ledger categories, sub-items, and posted entries. The ledger agent answers questions about this data.</div>
+
+    <div class="card agent-card">
+      <h2>Ledger Agent</h2>
+      <div class="subtitle" style="margin:0;">Answers questions about the approved ledger: which categories exist, what sub-items they include, budgets vs. YTD balances, and posted invoice history.</div>
+    </div>
+
+    <div class="card">
+      <h2>Approved Ledger</h2>
+      <div id="ledger-area"><div class="empty">Loading...</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Posted Entries</h2>
+      <div id="posted-area"><div class="empty">Loading...</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Ask the Ledger Agent</h2>
+      <div class="row">
+        <label for="q-input">Question</label>
+        <input type="text" id="q-input" placeholder="e.g. What is the YTD balance on Travel?" />
+      </div>
+      <button id="btn-ask">Ask</button>
+      <div id="qa-area"></div>
+    </div>
+  </main>
+
+  <script src="../assets/app.js?v=20260517"></script>
+  <script src="../assets/workflow.js?v=20260517"></script>
+  <script>
+    renderHeader('Ledger');
+
+    let ledger = null;
+
+    function renderLedger() {
+      const blocks = ledger.categories.map(c => `
+        <div class="cat-block">
+          <h3>${esc(c.categoryName)} <span class="cat-meta">[${esc(c.ledgerCode)}] · Budget ${fmtMoney(c.approvedBudget, ledger.currency)} · YTD ${fmtMoney(c.ytdBalance, ledger.currency)}</span></h3>
+          <table class="data">
+            <thead><tr><th>Sub-item</th><th style="width:160px;">Expected Unit Price</th><th>Aliases</th></tr></thead>
+            <tbody>
+              ${c.items.map(i => `
+                <tr>
+                  <td>${esc(i.itemName)}</td>
+                  <td>${fmtMoney(i.expectedUnitPrice, ledger.currency)}</td>
+                  <td style="color:var(--muted);">${esc((i.aliases || []).join(', '))}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`).join('');
+      document.getElementById('ledger-area').innerHTML = blocks;
+
+      const rows = (ledger.postedEntries || []).map(p => `
+        <tr>
+          <td>${esc(p.entryId)}</td>
+          <td>${esc(p.invoiceId)}</td>
+          <td>${esc(p.vendorName)}</td>
+          <td>${esc(p.category)}</td>
+          <td>${esc(p.item)}</td>
+          <td>${fmtMoney(p.amount, ledger.currency)}</td>
+          <td>${esc(p.postedDate)}</td>
+          <td>${statusBadge(p.status)}</td>
+        </tr>`).join('');
+      document.getElementById('posted-area').innerHTML = `
+        <table class="data">
+          <thead><tr><th>Entry</th><th>Invoice</th><th>Vendor</th><th>Category</th><th>Item</th><th>Amount</th><th>Posted</th><th>Status</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="8" class="empty">No posted entries.</td></tr>`}</tbody>
+        </table>`;
+    }
+
+    // Tiny canned Q&A for the demo. Looks up categories or items
+    // mentioned in the question and reports their numbers.
+    function answer(q) {
+      if (!q) return 'Please ask a question.';
+      const ql = q.toLowerCase();
+      const cat = ledger.categories.find(c => ql.includes(c.categoryName.toLowerCase()));
+      if (cat) {
+        if (ql.includes('budget')) return `${cat.categoryName} approved budget is ${fmtMoney(cat.approvedBudget, ledger.currency)}.`;
+        if (ql.includes('ytd') || ql.includes('balance') || ql.includes('spent')) {
+          const remaining = cat.approvedBudget - cat.ytdBalance;
+          return `${cat.categoryName}: YTD ${fmtMoney(cat.ytdBalance, ledger.currency)} of ${fmtMoney(cat.approvedBudget, ledger.currency)} (remaining ${fmtMoney(remaining, ledger.currency)}).`;
+        }
+        if (ql.includes('item') || ql.includes('sub')) {
+          return `${cat.categoryName} sub-items: ${cat.items.map(i => i.itemName).join(', ')}.`;
+        }
+        return `${cat.categoryName} [${cat.ledgerCode}] — Budget ${fmtMoney(cat.approvedBudget, ledger.currency)}, YTD ${fmtMoney(cat.ytdBalance, ledger.currency)}, ${cat.items.length} approved sub-item(s).`;
+      }
+      if (ql.includes('categories') || ql.includes('all categories')) {
+        return 'Approved categories: ' + ledger.categories.map(c => c.categoryName).join(', ') + '.';
+      }
+      if (ql.includes('posted') || ql.includes('history')) {
+        const entries = ledger.postedEntries || [];
+        if (!entries.length) return 'No posted entries yet.';
+        return entries.map(p => `${p.postedDate} · ${p.category} / ${p.item} · ${fmtMoney(p.amount, ledger.currency)}`).join('\n');
+      }
+      return 'I could not answer that from the approved ledger. Try asking about a specific category, its budget, YTD balance, or sub-items.';
+    }
+
+    document.getElementById('btn-ask').addEventListener('click', () => {
+      const q = document.getElementById('q-input').value.trim();
+      const a = answer(q);
+      document.getElementById('qa-area').innerHTML = `
+        <div class="qa-box"><strong>Q:</strong> ${esc(q)}</div>
+        <div class="qa-box" style="background:#eef2ff;border-color:#c7d2fe;"><strong>A:</strong> ${esc(a)}</div>`;
+    });
+
+    (async () => {
+      try {
+        const data = await loadWorkflowData();
+        ledger = data.ledger;
+        renderLedger();
+      } catch (err) {
+        document.getElementById('ledger-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

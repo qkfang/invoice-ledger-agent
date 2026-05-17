@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ingestion Agent</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    table.data { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Ingestion Screen</h1>
+    <div class="subtitle">The ingestion agent receives incoming vendor invoice documents into the inbox.</div>
+
+    <div class="card agent-card">
+      <h2>Ingestion Agent</h2>
+      <div class="subtitle" style="margin:0;">Confirms a document is a vendor invoice, extracts the envelope (vendor, date, total) and marks it accepted or rejected for downstream extraction.</div>
+    </div>
+
+    <div class="card">
+      <h2>Inbox</h2>
+      <div id="inbox-area"><div class="empty">Loading...</div></div>
+    </div>
+  </main>
+
+  <script src="../assets/app.js?v=20260517"></script>
+  <script src="../assets/workflow.js?v=20260517"></script>
+  <script>
+    renderHeader('Ingestion');
+
+    (async () => {
+      try {
+        const { invoices } = await loadWorkflowData();
+        const rows = invoices.map(inv => `
+          <tr>
+            <td><strong>${esc(inv.documentName)}</strong></td>
+            <td>${esc(inv.vendorName)}</td>
+            <td>${esc(inv.invoiceDate)}</td>
+            <td>${fmtMoney(inv.totalAmount, inv.currency)}</td>
+            <td>${statusBadge(inv.ingestionStatus)}</td>
+          </tr>`).join('');
+        document.getElementById('inbox-area').innerHTML = `
+          <table class="data">
+            <thead><tr><th>Document</th><th>Vendor</th><th>Invoice Date</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      } catch (err) {
+        document.getElementById('inbox-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>
