@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <NoWarn>OPENAI001;SCME0001</NoWarn>
+        <RootNamespace>FxAgent</RootNamespace>
+        <AssemblyName>agentdi</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Azure.AI.ContentUnderstanding" Version="1.1.0" />
+        <PackageReference Include="Azure.AI.DocumentIntelligence" Version="1.0.0" />
+        <PackageReference Include="Azure.AI.Extensions.OpenAI" Version="2.0.0" />
+        <PackageReference Include="Azure.AI.Projects" Version="2.0.0" />
+        <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
+        <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
+        <PackageReference Include="Azure.Identity" Version="1.21.0" />
+        <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.4.0" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    </ItemGroup>
+</Project>
