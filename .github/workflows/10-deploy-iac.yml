@@ -26,7 +26,7 @@ jobs:
         working-directory: bicep
         run: |
           az deployment group create \
-            --name 'agentdi-invledger-dev' \
+            --name 'invledger-dev' \
             --resource-group 'rg-invledger' \
             --template-file './main.bicep' \
             --parameters './main.bicepparam'
