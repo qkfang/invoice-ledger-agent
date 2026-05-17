@@ -5,7 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <NoWarn>OPENAI001;SCME0001</NoWarn>
         <RootNamespace>FxAgent</RootNamespace>
-        <AssemblyName>agentdi</AssemblyName>
+        <AssemblyName>invledger</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>
