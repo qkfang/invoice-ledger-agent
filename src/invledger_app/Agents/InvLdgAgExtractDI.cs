@@ -4,10 +4,10 @@ using OpenAI.Responses;
 
 namespace FxAgent.Agents;
 
-public class CtAgExtractDI : BaseAgent
+public class InvLdgAgExtractDI : BaseAgent
 {
-    public CtAgExtractDI(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
-        : base(aiProjectClient, "ct-ag-extract-di", deploymentName, GetInstructions(), tools, logger)
+    public InvLdgAgExtractDI(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
+        : base(aiProjectClient, "inv-ldg-ag-extract-di", deploymentName, GetInstructions(), tools, logger)
     {
     }
 

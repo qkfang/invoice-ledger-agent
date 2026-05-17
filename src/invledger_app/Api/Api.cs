@@ -14,9 +14,9 @@ record CorrespondenceChatRequest(string PreviousResponseId, string Message);
 public static class Endpoints
 {
     public static void MapAllEndpoints(this WebApplication app,
-        CtAgNotification notificationAgent,
-        CtAgCorrespondence correspondenceAgent,
-        CtAgExtractDI extractDiAgent, CtAgExtractCU extractCuAgent,
+        InvLdgAgNotification notificationAgent,
+        InvLdgAgCorrespondence correspondenceAgent,
+        InvLdgAgExtractDI extractDiAgent, InvLdgAgExtractCU extractCuAgent,
         DocIntelligenceService docService, ContentUnderstandingService cuService,
         BlobStorageService blobStorage, NotificationService notificationService,
         PendingApprovalStore approvalStore, ILogger logger)

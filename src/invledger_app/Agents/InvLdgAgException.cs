@@ -4,10 +4,10 @@ using OpenAI.Responses;
 
 namespace FxAgent.Agents;
 
-public class CtAgException : BaseAgent
+public class InvLdgAgException : BaseAgent
 {
-    public CtAgException(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
-        : base(aiProjectClient, "ct-ag-exception", deploymentName, GetInstructions(), tools, logger)
+    public InvLdgAgException(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
+        : base(aiProjectClient, "inv-ldg-ag-exception", deploymentName, GetInstructions(), tools, logger)
     {
     }
 

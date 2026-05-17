@@ -3,10 +3,10 @@ using Microsoft.Extensions.Logging;
 
 namespace FxAgent.Agents;
 
-public class CtAgExtractCU : BaseAgent
+public class InvLdgAgExtractCU : BaseAgent
 {
-    public CtAgExtractCU(AIProjectClient aiProjectClient, string deploymentName, ILogger? logger = null)
-        : base(aiProjectClient, "ct-ag-extract-cu", deploymentName, GetInstructions(), null, logger)
+    public InvLdgAgExtractCU(AIProjectClient aiProjectClient, string deploymentName, ILogger? logger = null)
+        : base(aiProjectClient, "inv-ldg-ag-extract-cu", deploymentName, GetInstructions(), null, logger)
     {
     }
 

@@ -4,10 +4,10 @@ using OpenAI.Responses;
 
 namespace FxAgent.Agents;
 
-public class CtAgIngestion : BaseAgent
+public class InvLdgAgIngestion : BaseAgent
 {
-    public CtAgIngestion(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
-        : base(aiProjectClient, "ct-ag-ingestion", deploymentName, GetInstructions(), tools, logger)
+    public InvLdgAgIngestion(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
+        : base(aiProjectClient, "inv-ldg-ag-ingestion", deploymentName, GetInstructions(), tools, logger)
     {
     }
 

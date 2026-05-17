@@ -4,10 +4,10 @@ using OpenAI.Responses;
 
 namespace FxAgent.Agents;
 
-public class CtAgInvoice : BaseAgent
+public class InvLdgAgInvoice : BaseAgent
 {
-    public CtAgInvoice(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
-        : base(aiProjectClient, "ct-ag-invoice", deploymentName, GetInstructions(), tools, logger)
+    public InvLdgAgInvoice(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
+        : base(aiProjectClient, "inv-ldg-ag-invoice", deploymentName, GetInstructions(), tools, logger)
     {
     }
 

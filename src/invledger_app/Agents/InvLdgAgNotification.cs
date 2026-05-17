@@ -4,10 +4,10 @@ using OpenAI.Responses;
 
 namespace FxAgent.Agents;
 
-public class CtAgNotification : BaseAgent
+public class InvLdgAgNotification : BaseAgent
 {
-    public CtAgNotification(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
-        : base(aiProjectClient, "ct-ag-notification", deploymentName, GetInstructions(), tools, logger)
+    public InvLdgAgNotification(AIProjectClient aiProjectClient, string deploymentName, IList<ResponseTool>? tools = null, ILogger? logger = null)
+        : base(aiProjectClient, "inv-ldg-ag-notification", deploymentName, GetInstructions(), tools, logger)
     {
     }
 
