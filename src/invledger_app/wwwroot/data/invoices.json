@@ -1,0 +1,86 @@
+{
+  "invoices": [
+    {
+      "invoiceId": "INV-2026-0001",
+      "vendorName": "Northwind Office Supplies",
+      "invoiceDate": "2026-05-12",
+      "dueDate": "2026-06-11",
+      "currency": "USD",
+      "totalAmount": 1842.50,
+      "ingestionStatus": "accepted",
+      "documentName": "northwind-may.pdf",
+      "categories": [
+        {
+          "categoryName": "Office Supplies",
+          "categoryTotal": 642.50,
+          "lineItems": [
+            { "lineItemId": "LI-1", "description": "A4 Paper (case)", "quantity": 5, "unitPrice": 38.50, "lineTotal": 192.50 },
+            { "lineItemId": "LI-2", "description": "Printer Toner Cartridge", "quantity": 2, "unitPrice": 225.00, "lineTotal": 450.00 }
+          ]
+        },
+        {
+          "categoryName": "IT Equipment",
+          "categoryTotal": 1200.00,
+          "lineItems": [
+            { "lineItemId": "LI-3", "description": "USB-C Docking Station", "quantity": 4, "unitPrice": 300.00, "lineTotal": 1200.00 }
+          ]
+        }
+      ]
+    },
+    {
+      "invoiceId": "INV-2026-0002",
+      "vendorName": "Globex Consulting",
+      "invoiceDate": "2026-05-09",
+      "dueDate": "2026-06-08",
+      "currency": "USD",
+      "totalAmount": 7350.00,
+      "ingestionStatus": "accepted",
+      "documentName": "globex-consulting-april.pdf",
+      "categories": [
+        {
+          "categoryName": "Professional Services",
+          "categoryTotal": 6000.00,
+          "lineItems": [
+            { "lineItemId": "LI-1", "description": "Solution Architecture Review", "quantity": 20, "unitPrice": 250.00, "lineTotal": 5000.00 },
+            { "lineItemId": "LI-2", "description": "Onsite Workshop Facilitation", "quantity": 4, "unitPrice": 250.00, "lineTotal": 1000.00 }
+          ]
+        },
+        {
+          "categoryName": "Travel",
+          "categoryTotal": 1350.00,
+          "lineItems": [
+            { "lineItemId": "LI-3", "description": "Air Travel (economy)", "quantity": 2, "unitPrice": 425.00, "lineTotal": 850.00 },
+            { "lineItemId": "LI-4", "description": "Hotel Accommodation (per night)", "quantity": 4, "unitPrice": 125.00, "lineTotal": 500.00 }
+          ]
+        }
+      ]
+    },
+    {
+      "invoiceId": "INV-2026-0003",
+      "vendorName": "Cascade Logistics",
+      "invoiceDate": "2026-05-14",
+      "dueDate": "2026-06-13",
+      "currency": "USD",
+      "totalAmount": 2480.00,
+      "ingestionStatus": "accepted",
+      "documentName": "cascade-logistics-shipping.pdf",
+      "categories": [
+        {
+          "categoryName": "Shipping & Freight",
+          "categoryTotal": 1980.00,
+          "lineItems": [
+            { "lineItemId": "LI-1", "description": "Domestic Freight", "quantity": 6, "unitPrice": 180.00, "lineTotal": 1080.00 },
+            { "lineItemId": "LI-2", "description": "Express Courier", "quantity": 10, "unitPrice": 90.00, "lineTotal": 900.00 }
+          ]
+        },
+        {
+          "categoryName": "Miscellaneous",
+          "categoryTotal": 500.00,
+          "lineItems": [
+            { "lineItemId": "LI-3", "description": "Pallet Wrap & Packaging", "quantity": 1, "unitPrice": 500.00, "lineTotal": 500.00 }
+          ]
+        }
+      ]
+    }
+  ]
+}

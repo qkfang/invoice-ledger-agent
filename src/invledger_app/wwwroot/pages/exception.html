@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exception Agent</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    table.data { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
+    .email-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 0.85rem; white-space: pre-wrap; margin-top: 8px; font-family: ui-monospace, Menlo, monospace; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Exception Screen</h1>
+    <div class="subtitle">Invoice line items that could not be mapped to the ledger. The exception agent routes each to the responsible team.</div>
+
+    <div class="card agent-card">
+      <h2>Exception Agent</h2>
+      <div class="subtitle" style="margin:0;">For every exception line item, picks the right team (procurement, finance, or vendor-management), drafts a notification email, and sends it via the notification tool.</div>
+    </div>
+
+    <div class="card">
+      <h2>Exceptions Across All Invoices</h2>
+      <div id="exc-area"><div class="empty">Loading...</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Draft Notifications</h2>
+      <div id="draft-area"><div class="empty">Click "Draft notifications" to generate emails.</div></div>
+      <button id="btn-draft" style="margin-top:10px;">Draft notifications</button>
+    </div>
+  </main>
+
+  <script src="../assets/app.js?v=20260517"></script>
+  <script src="../assets/workflow.js?v=20260517"></script>
+  <script>
+    renderHeader('Exception');
+
+    let allExceptions = [];
+
+    function pickTeam(exc) {
+      if (!exc.matchedLedgerCategory) {
+        return { team: 'procurement', recipient: 'procurement@mailbox.local' };
+      }
+      if (exc.lineTotal > 1000) {
+        return { team: 'finance', recipient: 'finance@mailbox.local' };
+      }
+      return { team: 'vendor-management', recipient: 'vendor-management@mailbox.local' };
+    }
+
+    function buildEmail(exc) {
+      const { team, recipient } = pickTeam(exc);
+      const subject = `[Action] Unmatched invoice line — ${exc.invoiceId} / ${exc.description}`;
+      const body =
+`Hi ${team} team,
+
+Invoice ${exc.invoiceId} from ${exc.vendorName} contains a line item that could not be matched to the ledger.
+
+Category: ${exc.categoryName}
+Description: ${exc.description}
+Quantity: ${exc.quantity}
+Unit Price: ${fmtMoney(exc.unitPrice)}
+Line Total: ${fmtMoney(exc.lineTotal)}
+
+Reason: ${exc.reason}
+
+Please review and confirm the correct ledger mapping or reject the line item.`;
+      return { team, recipient, subject, body };
+    }
+
+    function renderExceptions() {
+      if (!allExceptions.length) {
+        document.getElementById('exc-area').innerHTML = '<div class="empty">No exceptions found across the current invoice set.</div>';
+        return;
+      }
+      const rows = allExceptions.map(e => `
+        <tr>
+          <td>${esc(e.invoiceId)}</td>
+          <td>${esc(e.vendorName)}</td>
+          <td>${esc(e.categoryName)}</td>
+          <td>${esc(e.description)}</td>
+          <td>${fmtMoney(e.lineTotal)}</td>
+          <td style="color:var(--muted);">${esc(e.reason)}</td>
+        </tr>`).join('');
+      document.getElementById('exc-area').innerHTML = `
+        <table class="data">
+          <thead><tr><th>Invoice</th><th>Vendor</th><th>Category</th><th>Description</th><th>Line Total</th><th>Reason</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    document.getElementById('btn-draft').addEventListener('click', () => {
+      if (!allExceptions.length) {
+        document.getElementById('draft-area').innerHTML = '<div class="empty">No exceptions to draft.</div>';
+        return;
+      }
+      document.getElementById('draft-area').innerHTML = allExceptions.map(e => {
+        const m = buildEmail(e);
+        return `
+          <div style="margin-bottom:14px;">
+            <div style="font-size:0.85rem;color:var(--muted);">Assigned team: <strong>${esc(m.team)}</strong> · Recipient: <code>${esc(m.recipient)}</code></div>
+            <div style="font-size:0.9rem;margin-top:4px;"><strong>${esc(m.subject)}</strong></div>
+            <div class="email-box">${esc(m.body)}</div>
+            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Send result: queued (simulated)</div>
+          </div>`;
+      }).join('');
+    });
+
+    (async () => {
+      try {
+        const { invoices, ledger, rules } = await loadWorkflowData();
+        allExceptions = [];
+        for (const inv of invoices) {
+          const { results } = processInvoice(inv, ledger, rules);
+          allExceptions.push(...results.filter(r => r.status === 'exception'));
+        }
+        renderExceptions();
+      } catch (err) {
+        document.getElementById('exc-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

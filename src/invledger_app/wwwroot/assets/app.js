@@ -1,11 +1,11 @@
 // Shared header / navigation injected on every page.
 const NAV = [
   { href: 'index.html', label: 'Home' },
-  { href: 'pages/extract-di.html', label: 'Extract (DI)' },
-  { href: 'pages/extract-cu.html', label: 'Extract (CU)' },
-  { href: 'pages/extract-agent.html', label: 'Extract (Agent)' },
-  { href: 'pages/notification.html', label: 'Notification Agent' },
-  { href: 'pages/correspondence.html', label: 'Correspondence Agent' }
+  { href: 'pages/ingestion.html', label: 'Ingestion' },
+  { href: 'pages/invoice.html', label: 'Invoice' },
+  { href: 'pages/processing.html', label: 'Processing' },
+  { href: 'pages/exception.html', label: 'Exception' },
+  { href: 'pages/ledger.html', label: 'Ledger' }
 ];
 
 function renderHeader(activeKey) {

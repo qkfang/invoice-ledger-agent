@@ -120,10 +120,10 @@ var appMcpToolWithApproval = ResponseTool.CreateMcpTool(
     serverUri: new Uri($"{appMcpUrl}/mcp"),
     toolCallApprovalPolicy: new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.AlwaysRequireApproval));
 
-var notificationAgent = new CtAgNotification(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<CtAgNotification>());
-var correspondenceAgent = new CtAgCorrespondence(aiProjectClient, deploymentName, [appMcpToolWithApproval], loggerFactory.CreateLogger<CtAgCorrespondence>());
-var extractDiAgent = new CtAgExtractDI(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<CtAgExtractDI>());
-var extractCuAgent = new CtAgExtractCU(aiProjectClient, deploymentName, loggerFactory.CreateLogger<CtAgExtractCU>());
+var notificationAgent = new InvLdgAgNotification(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgNotification>());
+var correspondenceAgent = new InvLdgAgCorrespondence(aiProjectClient, deploymentName, [appMcpToolWithApproval], loggerFactory.CreateLogger<InvLdgAgCorrespondence>());
+var extractDiAgent = new InvLdgAgExtractDI(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgExtractDI>());
+var extractCuAgent = new InvLdgAgExtractCU(aiProjectClient, deploymentName, loggerFactory.CreateLogger<InvLdgAgExtractCU>());
 var docService = app.Services.GetRequiredService<DocIntelligenceService>();
 var cuService = app.Services.GetRequiredService<ContentUnderstandingService>();
 await cuService.InitializeAsync();

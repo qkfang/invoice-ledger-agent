@@ -1,0 +1,45 @@
+{
+  "rules": [
+    {
+      "id": "R1",
+      "name": "Exact category + item match",
+      "description": "Invoice category and line-item description map directly to a ledger category and sub-item (including aliases).",
+      "outcome": "matched"
+    },
+    {
+      "id": "R2",
+      "name": "Within price tolerance",
+      "description": "Line-item unit price is within ±10% of the ledger expected unit price (or $50 absolute, whichever is greater).",
+      "tolerancePercent": 10,
+      "toleranceAbsolute": 50,
+      "outcome": "matched"
+    },
+    {
+      "id": "R3",
+      "name": "Price outside tolerance",
+      "description": "Line-item unit price deviates from ledger expected by more than R2 tolerance. Requires human review.",
+      "outcome": "review",
+      "humanInLoop": true
+    },
+    {
+      "id": "R4",
+      "name": "High value line",
+      "description": "Line total exceeds $5,000. Always requires human review even if matched on category and item.",
+      "thresholdAmount": 5000,
+      "outcome": "review",
+      "humanInLoop": true
+    },
+    {
+      "id": "R5",
+      "name": "No ledger item match",
+      "description": "Category exists but the sub-item is not in the approved ledger item list. Sent to exception queue.",
+      "outcome": "exception"
+    },
+    {
+      "id": "R6",
+      "name": "No ledger category match",
+      "description": "Invoice category does not exist in the approved ledger. Sent to exception queue.",
+      "outcome": "exception"
+    }
+  ]
+}
