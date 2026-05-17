@@ -61,10 +61,11 @@ builder.Services.AddSingleton(sp => new ContentUnderstandingService(
     sp.GetRequiredService<ILogger<ContentUnderstandingService>>()));
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<PendingApprovalStore>();
+builder.Services.AddSingleton<GeneralLedgerService>();
 
 builder.Services.AddMcpServer()
     .WithHttpTransport(options => { options.Stateless = true; })
-    .WithTools<AgentDiMcpTools>();
+    .WithTools<InvLedgerMcpTools>();
 
 builder.Services.AddCors();
 
@@ -110,12 +111,12 @@ var deploymentName = app.Configuration["AZURE_AI_MODEL_DEPLOYMENT_NAME"]
 var aiProjectClient = new AIProjectClient(new Uri(endpoint), credential);
 var appMcpUrl = app.Configuration["APP_MCP_URL"] ?? "http://localhost:5001";
 var appMcpTool = ResponseTool.CreateMcpTool(
-    serverLabel: "agentdi-invledger-mcp",
+    serverLabel: "invledger-mcp",
     serverUri: new Uri($"{appMcpUrl}/mcp"),
     toolCallApprovalPolicy: new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.NeverRequireApproval));
 
 var appMcpToolWithApproval = ResponseTool.CreateMcpTool(
-    serverLabel: "agentdi-invledger-mcp",
+    serverLabel: "invledger-mcp",
     serverUri: new Uri($"{appMcpUrl}/mcp"),
     toolCallApprovalPolicy: new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.AlwaysRequireApproval));
 

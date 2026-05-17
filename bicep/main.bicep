@@ -155,7 +155,7 @@ module webApp 'webapp.bicep' = {
       AZURE_STORAGE_ACCOUNT_NAME: storageAccountName
       AZURE_TENANT_ID: tenant().tenantId
     }
-    appCommandLine: 'dotnet agentdi.dll'
+    appCommandLine: 'dotnet invledger.dll'
   }
 }
 
