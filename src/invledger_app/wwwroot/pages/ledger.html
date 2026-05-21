@@ -9,9 +9,13 @@
     table.data { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
     table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
-    .cat-block { margin-top: 14px; }
-    .cat-block h3 { font-size: 0.95rem; margin-bottom: 6px; }
+    .cat-block { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+    .cat-block:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+    .cat-block h3 { font-size: 0.95rem; margin-bottom: 10px; }
     .cat-meta { color: var(--muted); font-weight: 400; font-size: 0.85rem; margin-left: 6px; }
+    .ledger-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .ledger-split { grid-template-columns: 1fr; } }
+    .col-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 6px; }
     .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
     .qa-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 0.88rem; margin-top: 8px; white-space: pre-wrap; }
   </style>
@@ -52,24 +56,58 @@
   <script>
     renderHeader('Ledger');
 
-    let ledger = null;
+    let ledger = null, invoices = [];
 
     function renderLedger() {
-      const blocks = ledger.categories.map(c => `
-        <div class="cat-block">
-          <h3>${esc(c.categoryName)} <span class="cat-meta">[${esc(c.ledgerCode)}] · Budget ${fmtMoney(c.approvedBudget, ledger.currency)} · YTD ${fmtMoney(c.ytdBalance, ledger.currency)}</span></h3>
-          <table class="data">
-            <thead><tr><th>Sub-item</th><th style="width:160px;">Expected Unit Price</th><th>Aliases</th></tr></thead>
-            <tbody>
-              ${c.items.map(i => `
-                <tr>
-                  <td>${esc(i.itemName)}</td>
-                  <td>${fmtMoney(i.expectedUnitPrice, ledger.currency)}</td>
-                  <td style="color:var(--muted);">${esc((i.aliases || []).join(', '))}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`).join('');
+      const invByCategory = {};
+      for (const inv of invoices) {
+        for (const cat of (inv.categories || [])) {
+          if (!invByCategory[cat.categoryName]) invByCategory[cat.categoryName] = [];
+          for (const li of (cat.lineItems || [])) {
+            invByCategory[cat.categoryName].push({ ...li, invoiceId: inv.invoiceId, currency: inv.currency });
+          }
+        }
+      }
+
+      const blocks = ledger.categories.map(c => {
+        const invItems = invByCategory[c.categoryName] || [];
+        const invRows = invItems.length
+          ? invItems.map(li => `
+              <tr>
+                <td>${esc(li.invoiceId)}</td>
+                <td>${esc(li.description)}</td>
+                <td>${fmtMoney(li.unitPrice, ledger.currency)}</td>
+                <td>${fmtMoney(li.lineTotal, ledger.currency)}</td>
+              </tr>`).join('')
+          : `<tr><td colspan="4" class="empty" style="padding:10px 8px;">No invoice items.</td></tr>`;
+        return `
+          <div class="cat-block">
+            <h3>${esc(c.categoryName)} <span class="cat-meta">[${esc(c.ledgerCode)}] · Budget ${fmtMoney(c.approvedBudget, ledger.currency)} · YTD ${fmtMoney(c.ytdBalance, ledger.currency)}</span></h3>
+            <div class="ledger-split">
+              <div>
+                <div class="col-label">Ledger Items</div>
+                <table class="data">
+                  <thead><tr><th>Sub-item</th><th style="width:140px;">Expected Unit Price</th><th>Aliases</th></tr></thead>
+                  <tbody>
+                    ${c.items.map(i => `
+                      <tr>
+                        <td>${esc(i.itemName)}</td>
+                        <td>${fmtMoney(i.expectedUnitPrice, ledger.currency)}</td>
+                        <td style="color:var(--muted);">${esc((i.aliases || []).join(', '))}</td>
+                      </tr>`).join('')}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <div class="col-label">Invoice Items</div>
+                <table class="data">
+                  <thead><tr><th>Invoice</th><th>Description</th><th style="width:100px;">Unit Price</th><th style="width:100px;">Line Total</th></tr></thead>
+                  <tbody>${invRows}</tbody>
+                </table>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
       document.getElementById('ledger-area').innerHTML = blocks;
 
       const rows = (ledger.postedEntries || []).map(p => `
@@ -130,6 +168,7 @@
       try {
         const data = await loadWorkflowData();
         ledger = data.ledger;
+        invoices = data.invoices || [];
         renderLedger();
       } catch (err) {
         document.getElementById('ledger-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
