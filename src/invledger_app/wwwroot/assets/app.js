@@ -5,7 +5,8 @@ const NAV = [
   { href: 'pages/invoice.html', label: 'Invoice' },
   { href: 'pages/processing.html', label: 'Processing' },
   { href: 'pages/exception.html', label: 'Exception' },
-  { href: 'pages/ledger.html', label: 'Ledger' }
+  { href: 'pages/ledger.html', label: 'Ledger' },
+  { href: 'pages/fxrates.html', label: 'FX Rates' }
 ];
 
 function renderHeader(activeKey) {

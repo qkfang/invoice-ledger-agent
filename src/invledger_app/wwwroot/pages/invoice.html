@@ -47,6 +47,7 @@
     renderHeader('Invoice');
 
     let invoices = [];
+    let fxRates = [];
     let selectedId = null;
 
     function renderList() {
@@ -63,23 +64,31 @@
     function renderDetail() {
       const inv = invoices.find(i => i.invoiceId === selectedId);
       if (!inv) { document.getElementById('detail-area').innerHTML = '<div class="empty">Select an invoice on the left.</div>'; return; }
-      const categories = inv.categories.map(c => `
+      const categories = inv.categories.map(c => {
+        const audCatTotal = c.audCategoryTotal ?? convertToAud(c.categoryTotal, inv.currency, fxRates);
+        return `
         <div class="category-block">
-          <h3>${esc(c.categoryName)} <span style="color:var(--muted);font-weight:400;">— ${fmtMoney(c.categoryTotal, inv.currency)}</span></h3>
+          <h3>${esc(c.categoryName)} <span style="color:var(--muted);font-weight:400;">— ${fmtMoney(c.categoryTotal, inv.currency)}${audCatTotal != null ? ` / AUD ${Number(audCatTotal).toFixed(2)}` : ''}</span></h3>
           <table class="data">
-            <thead><tr><th>Description</th><th style="width:80px;">Qty</th><th style="width:110px;">Unit Price</th><th style="width:110px;">Line Total</th></tr></thead>
+            <thead><tr><th>Description</th><th style="width:80px;">Qty</th><th style="width:110px;">Unit Price</th><th style="width:110px;">Line Total</th><th style="width:110px;">AUD</th></tr></thead>
             <tbody>
-              ${c.lineItems.map(li => `
+              ${c.lineItems.map(li => {
+                const audLine = li.audLineTotal ?? convertToAud(li.lineTotal, inv.currency, fxRates);
+                return `
                 <tr>
                   <td>${esc(li.description)}</td>
                   <td>${esc(li.quantity)}</td>
                   <td>${fmtMoney(li.unitPrice, inv.currency)}</td>
                   <td>${fmtMoney(li.lineTotal, inv.currency)}</td>
-                </tr>`).join('')}
+                  <td>${audLine != null ? `AUD ${Number(audLine).toFixed(2)}` : '—'}</td>
+                </tr>`;
+              }).join('')}
             </tbody>
           </table>
-        </div>`).join('');
+        </div>`;
+      }).join('');
 
+      const audTotal = inv.audTotalAmount ?? convertToAud(inv.totalAmount, inv.currency, fxRates);
       document.getElementById('detail-area').innerHTML = `
         <div class="field-grid">
           <div class="k">Invoice ID</div><div>${esc(inv.invoiceId)}</div>
@@ -87,7 +96,7 @@
           <div class="k">Invoice Date</div><div>${esc(inv.invoiceDate)}</div>
           <div class="k">Due Date</div><div>${esc(inv.dueDate)}</div>
           <div class="k">Currency</div><div>${esc(inv.currency)}</div>
-          <div class="k">Total Amount</div><div>${fmtMoney(inv.totalAmount, inv.currency)}</div>
+          <div class="k">Total Amount</div><div>${fmtMoney(inv.totalAmount, inv.currency)}${audTotal != null ? ` <span style="color:var(--muted);font-size:0.85em;">/ AUD ${Number(audTotal).toFixed(2)}</span>` : ''}</div>
         </div>
         ${categories}`;
     }
@@ -96,6 +105,7 @@
       try {
         const data = await loadWorkflowData();
         invoices = data.invoices;
+        fxRates = data.fxRates || [];
         selectedId = invoices[0]?.invoiceId || null;
         renderList(); renderDetail();
       } catch (err) {
