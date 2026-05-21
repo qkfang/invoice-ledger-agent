@@ -191,7 +191,7 @@ public static class Endpoints
 
             logger.LogInformation("Save to Fabric: {FileName} ({Size} bytes)", Sanitize(file.FileName), file.Length);
             using var stream = file.OpenReadStream();
-            var path = await fabricLakehouse.UploadAsync(stream, file.FileName);
+            var path = await fabricLakehouse.UploadAsync(stream, file.FileName, file.Length);
             return Results.Ok(new { path, documentName = file.FileName });
         });
 

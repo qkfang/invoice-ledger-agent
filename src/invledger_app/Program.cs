@@ -30,6 +30,7 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNEC
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
+builder.Services.AddHttpClient();
 
 var endpoint = builder.Configuration["AZURE_AI_PROJECT_ENDPOINT"]
     ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT is not set.");
@@ -136,8 +137,9 @@ var fabricLakehouseId = app.Configuration["FABRIC_LAKEHOUSE_ID"];
 FabricLakehouseService? fabricLakehouse = null;
 if (!string.IsNullOrWhiteSpace(fabricWorkspaceId) && !string.IsNullOrWhiteSpace(fabricLakehouseId))
 {
+    var httpClientFactory = app.Services.GetRequiredService<IHttpClientFactory>();
     fabricLakehouse = new FabricLakehouseService(fabricWorkspaceId, fabricLakehouseId, credential,
-        loggerFactory.CreateLogger<FabricLakehouseService>());
+        httpClientFactory, loggerFactory.CreateLogger<FabricLakehouseService>());
 }
 
 app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent, docService, cuService, blobStorage, notificationService, approvalStore, fabricLakehouse, logger);
