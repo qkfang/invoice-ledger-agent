@@ -63,6 +63,7 @@ builder.Services.AddSingleton(sp => new ContentUnderstandingService(
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<PendingApprovalStore>();
 builder.Services.AddSingleton<GeneralLedgerService>();
+builder.Services.AddSingleton<FxRateService>();
 
 builder.Services.AddMcpServer()
     .WithHttpTransport(options => { options.Stateless = true; })
@@ -142,6 +143,7 @@ if (!string.IsNullOrWhiteSpace(fabricWorkspaceId) && !string.IsNullOrWhiteSpace(
         httpClientFactory, loggerFactory.CreateLogger<FabricLakehouseService>());
 }
 
-app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent, docService, cuService, blobStorage, notificationService, approvalStore, fabricLakehouse, logger);
+var fxRateService = app.Services.GetRequiredService<FxRateService>();
+app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent, docService, cuService, blobStorage, notificationService, approvalStore, fxRateService, fabricLakehouse, logger);
 
 await app.RunAsync();

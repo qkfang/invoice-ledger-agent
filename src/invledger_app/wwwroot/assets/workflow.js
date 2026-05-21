@@ -11,18 +11,28 @@ async function loadJson(path) {
 }
 
 async function loadWorkflowData() {
-  const [invoices, ledger, rules] = await Promise.all([
+  const [invoices, ledger, rules, fxRates] = await Promise.all([
     loadJson('data/invoices.json'),
     loadJson('data/ledger.json'),
-    loadJson('data/rules.json')
+    loadJson('data/rules.json'),
+    loadJson('data/fx-rates.json')
   ]);
-  return { invoices: invoices.invoices, ledger, rules: rules.rules };
+  return { invoices: invoices.invoices, ledger, rules: rules.rules, fxRates: fxRates.rates };
 }
 
 function fmtMoney(amount, currency) {
   if (amount == null || isNaN(amount)) return '—';
   const c = currency || 'USD';
   return `${c} ${Number(amount).toFixed(2)}`;
+}
+
+function convertToAud(amount, fromCurrency, fxRates) {
+  if (!fxRates || !fromCurrency) return null;
+  const from = fromCurrency.toUpperCase();
+  if (from === 'AUD') return amount;
+  const rate = fxRates.find(r => r.from.toUpperCase() === from && r.to.toUpperCase() === 'AUD');
+  if (!rate) return null;
+  return Math.round(amount * rate.rate * 100) / 100;
 }
 
 // Locate a ledger item by description, scanning aliases too. Returns

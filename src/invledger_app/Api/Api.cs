@@ -19,7 +19,8 @@ public static class Endpoints
         InvLdgAgExtractDI extractDiAgent, InvLdgAgExtractCU extractCuAgent,
         DocIntelligenceService docService, ContentUnderstandingService cuService,
         BlobStorageService blobStorage, NotificationService notificationService,
-        PendingApprovalStore approvalStore, FabricLakehouseService? fabricLakehouse,
+        PendingApprovalStore approvalStore, FxRateService fxRateService,
+        FabricLakehouseService? fabricLakehouse,
         ILogger logger)
     {
         app.MapGet("/agents/instructions", () =>
@@ -193,6 +194,14 @@ public static class Endpoints
             using var stream = file.OpenReadStream();
             var path = await fabricLakehouse.UploadAsync(stream, file.FileName, file.Length);
             return Results.Ok(new { path, documentName = file.FileName });
+        });
+
+        app.MapGet("/fx-rates", () => Results.Ok(fxRateService.GetRates()));
+
+        app.MapPut("/fx-rates", (List<FxRate> rates) =>
+        {
+            fxRateService.UpdateRates(rates);
+            return Results.Ok(fxRateService.GetRates());
         });
 
     }
