@@ -162,26 +162,29 @@ public class InvLedgerMcpTools
         if (string.IsNullOrWhiteSpace(fromCurrency) || string.IsNullOrWhiteSpace(toCurrency))
             return "Error: fromCurrency and toCurrency are required.";
 
-        if (fromCurrency.Equals(toCurrency, StringComparison.OrdinalIgnoreCase))
+        var from = fromCurrency.ToUpperInvariant();
+        var to = toCurrency.ToUpperInvariant();
+
+        if (from == to)
         {
             return JsonSerializer.Serialize(new
             {
-                from = fromCurrency.ToUpperInvariant(),
-                to = toCurrency.ToUpperInvariant(),
+                from,
+                to,
                 amount,
                 rate = 1.0m,
                 convertedAmount = amount
             }, JsonOptions);
         }
 
-        var rate = _fxRate.GetRate(fromCurrency, toCurrency);
+        var rate = _fxRate.GetRate(from, to);
         if (rate is null)
-            return $"Error: no exchange rate found for {fromCurrency.ToUpperInvariant()} to {toCurrency.ToUpperInvariant()}.";
+            return $"Error: no exchange rate found for {from} to {to}.";
 
         return JsonSerializer.Serialize(new
         {
-            from = fromCurrency.ToUpperInvariant(),
-            to = toCurrency.ToUpperInvariant(),
+            from,
+            to,
             amount,
             rate = rate.Value,
             convertedAmount = Math.Round(amount * rate.Value, 2)

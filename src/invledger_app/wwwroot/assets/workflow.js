@@ -28,8 +28,9 @@ function fmtMoney(amount, currency) {
 
 function convertToAud(amount, fromCurrency, fxRates) {
   if (!fxRates || !fromCurrency) return null;
-  if (fromCurrency.toUpperCase() === 'AUD') return amount;
-  const rate = fxRates.find(r => r.from.toUpperCase() === fromCurrency.toUpperCase() && r.to.toUpperCase() === 'AUD');
+  const from = fromCurrency.toUpperCase();
+  if (from === 'AUD') return amount;
+  const rate = fxRates.find(r => r.from.toUpperCase() === from && r.to.toUpperCase() === 'AUD');
   if (!rate) return null;
   return Math.round(amount * rate.rate * 100) / 100;
 }

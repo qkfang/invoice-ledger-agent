@@ -21,6 +21,8 @@ public class InvLdgAgInvoice : BaseAgent
           - Convert totalAmount → audTotalAmount on the invoice header.
           - Convert each categoryTotal → audCategoryTotal on every category.
           - Convert each lineTotal → audLineTotal on every line item.
+          - If the invoice currency is already AUD, set each aud* field equal to the corresponding original amount.
+          - If no exchange rate is available, omit the aud* fields from the output.
         Return a single JSON object with the structure above including all aud* fields. No text outside the JSON.
         """;
 }
