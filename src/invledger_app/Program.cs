@@ -131,6 +131,15 @@ var blobStorage = app.Services.GetRequiredService<BlobStorageService>();
 var notificationService = app.Services.GetRequiredService<NotificationService>();
 var approvalStore = app.Services.GetRequiredService<PendingApprovalStore>();
 
-app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent, docService, cuService, blobStorage, notificationService, approvalStore, logger);
+var fabricWorkspaceId = app.Configuration["FABRIC_LAKEHOUSE_WORKSPACE_ID"];
+var fabricLakehouseId = app.Configuration["FABRIC_LAKEHOUSE_ID"];
+FabricLakehouseService? fabricLakehouse = null;
+if (!string.IsNullOrWhiteSpace(fabricWorkspaceId) && !string.IsNullOrWhiteSpace(fabricLakehouseId))
+{
+    fabricLakehouse = new FabricLakehouseService(fabricWorkspaceId, fabricLakehouseId, credential,
+        loggerFactory.CreateLogger<FabricLakehouseService>());
+}
+
+app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent, docService, cuService, blobStorage, notificationService, approvalStore, fabricLakehouse, logger);
 
 await app.RunAsync();

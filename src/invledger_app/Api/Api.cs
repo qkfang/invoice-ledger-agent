@@ -19,7 +19,8 @@ public static class Endpoints
         InvLdgAgExtractDI extractDiAgent, InvLdgAgExtractCU extractCuAgent,
         DocIntelligenceService docService, ContentUnderstandingService cuService,
         BlobStorageService blobStorage, NotificationService notificationService,
-        PendingApprovalStore approvalStore, ILogger logger)
+        PendingApprovalStore approvalStore, FabricLakehouseService? fabricLakehouse,
+        ILogger logger)
     {
         app.MapGet("/agents/instructions", () =>
         {
@@ -173,6 +174,25 @@ public static class Endpoints
 
             var step = await correspondenceAgent.ContinueRunAsync(state.PreviousResponseId, state.ApprovalItemId, request.Approved);
             return BuildCorrespondenceResponse(step, approvalStore, null);
+        });
+
+        app.MapPost("/ingestion/save-to-fabric", async (HttpRequest http) =>
+        {
+            if (!http.HasFormContentType)
+                return Results.BadRequest(new { error = "multipart/form-data required" });
+
+            var form = await http.ReadFormAsync();
+            var file = form.Files.FirstOrDefault();
+            if (file is null || file.Length == 0)
+                return Results.BadRequest(new { error = "file is required" });
+
+            if (fabricLakehouse is null)
+                return Results.BadRequest(new { error = "Fabric Lakehouse is not configured. Set FABRIC_LAKEHOUSE_WORKSPACE_ID and FABRIC_LAKEHOUSE_ID." });
+
+            logger.LogInformation("Save to Fabric: {FileName} ({Size} bytes)", Sanitize(file.FileName), file.Length);
+            using var stream = file.OpenReadStream();
+            var path = await fabricLakehouse.UploadAsync(stream, file.FileName);
+            return Results.Ok(new { path, documentName = file.FileName });
         });
 
     }
