@@ -19,7 +19,7 @@ public static class Endpoints
         InvLdgAgExtractDI extractDiAgent, InvLdgAgExtractCU extractCuAgent,
         DocIntelligenceService docService, ContentUnderstandingService cuService,
         BlobStorageService blobStorage, NotificationService notificationService,
-        PendingApprovalStore approvalStore, ILogger logger)
+        PendingApprovalStore approvalStore, FxRateService fxRateService, ILogger logger)
     {
         app.MapGet("/agents/instructions", () =>
         {
@@ -173,6 +173,14 @@ public static class Endpoints
 
             var step = await correspondenceAgent.ContinueRunAsync(state.PreviousResponseId, state.ApprovalItemId, request.Approved);
             return BuildCorrespondenceResponse(step, approvalStore, null);
+        });
+
+        app.MapGet("/fx-rates", () => Results.Ok(fxRateService.GetRates()));
+
+        app.MapPut("/fx-rates", (List<FxRate> rates) =>
+        {
+            fxRateService.UpdateRates(rates);
+            return Results.Ok(fxRateService.GetRates());
         });
 
     }

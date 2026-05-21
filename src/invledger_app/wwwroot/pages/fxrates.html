@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FX Rates</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    table.rates { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    table.rates th, table.rates td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    table.rates th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    table.rates input { width: 100px; }
+    .add-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-top: 14px; }
+    .add-row label { margin-bottom: 4px; }
+    .row-actions { display: flex; gap: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>FX Rates</h1>
+    <div class="subtitle">Configure exchange rates used to convert invoice amounts to AUD.</div>
+
+    <div class="card">
+      <h2>Exchange Rate Configuration</h2>
+      <div id="notice-area"></div>
+      <table class="rates" id="rates-table">
+        <thead>
+          <tr>
+            <th>From</th>
+            <th>To</th>
+            <th>Rate</th>
+            <th style="width:160px;"></th>
+          </tr>
+        </thead>
+        <tbody id="rates-body">
+          <tr><td colspan="4"><div class="empty">Loading...</div></td></tr>
+        </tbody>
+      </table>
+
+      <div class="add-row" id="add-form">
+        <div>
+          <label>From Currency</label>
+          <input type="text" id="add-from" placeholder="USD" maxlength="10" style="text-transform:uppercase;" />
+        </div>
+        <div>
+          <label>To Currency</label>
+          <input type="text" id="add-to" placeholder="AUD" maxlength="10" style="text-transform:uppercase;" />
+        </div>
+        <div>
+          <label>Rate</label>
+          <input type="number" id="add-rate" placeholder="1.55" step="0.0001" min="0.0001" />
+        </div>
+        <div>
+          <button id="btn-add" onclick="addRate()">Add Rate</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>How It Works</h2>
+      <p style="font-size:0.9rem;color:var(--muted);line-height:1.6;">
+        The invoice agent calls the <code>fx_convert</code> MCP tool to convert each invoice line total,
+        category total, and the invoice total amount from the invoice currency to AUD.
+        The rates configured here are loaded by the tool at runtime.
+        Changes take effect immediately for new agent runs.
+      </p>
+    </div>
+  </main>
+
+  <script src="../assets/app.js?v=20260517"></script>
+  <script>
+    renderHeader('FX Rates');
+
+    let rates = [];
+
+    function showNotice(msg, type) {
+      document.getElementById('notice-area').innerHTML =
+        `<div class="notice ${type}">${esc(msg)}</div>`;
+      setTimeout(() => { document.getElementById('notice-area').innerHTML = ''; }, 3000);
+    }
+
+    function renderRates() {
+      const tbody = document.getElementById('rates-body');
+      if (rates.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4"><div class="empty">No rates configured.</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = rates.map((r, i) => `
+        <tr data-index="${i}">
+          <td><input type="text" class="r-from" value="${esc(r.from)}" maxlength="10" style="text-transform:uppercase;width:90px;" /></td>
+          <td><input type="text" class="r-to" value="${esc(r.to)}" maxlength="10" style="text-transform:uppercase;width:90px;" /></td>
+          <td><input type="number" class="r-rate" value="${r.rate}" step="0.0001" min="0.0001" style="width:110px;" /></td>
+          <td>
+            <div class="row-actions">
+              <button class="btn-secondary" onclick="saveRow(${i})">Save</button>
+              <button class="btn-danger" onclick="deleteRow(${i})">Delete</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+
+    function getRowValues(i) {
+      const row = document.querySelector(`tr[data-index="${i}"]`);
+      return {
+        from: row.querySelector('.r-from').value.trim().toUpperCase(),
+        to: row.querySelector('.r-to').value.trim().toUpperCase(),
+        rate: parseFloat(row.querySelector('.r-rate').value)
+      };
+    }
+
+    function saveRow(i) {
+      const v = getRowValues(i);
+      if (!v.from || !v.to || isNaN(v.rate) || v.rate <= 0) {
+        showNotice('All fields are required and rate must be positive.', 'error');
+        return;
+      }
+      rates[i] = v;
+      persistRates();
+    }
+
+    function deleteRow(i) {
+      rates.splice(i, 1);
+      persistRates();
+    }
+
+    function addRate() {
+      const from = document.getElementById('add-from').value.trim().toUpperCase();
+      const to = document.getElementById('add-to').value.trim().toUpperCase();
+      const rate = parseFloat(document.getElementById('add-rate').value);
+      if (!from || !to || isNaN(rate) || rate <= 0) {
+        showNotice('All fields are required and rate must be positive.', 'error');
+        return;
+      }
+      rates.push({ from, to, rate });
+      document.getElementById('add-from').value = '';
+      document.getElementById('add-to').value = '';
+      document.getElementById('add-rate').value = '';
+      persistRates();
+    }
+
+    async function persistRates() {
+      try {
+        const res = await fetch('/fx-rates', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(rates)
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const saved = await res.json();
+        rates = saved;
+        renderRates();
+        showNotice('Rates saved.', 'success');
+      } catch (err) {
+        showNotice(`Save failed: ${err.message}`, 'error');
+        renderRates();
+      }
+    }
+
+    (async () => {
+      try {
+        const res = await fetch('/fx-rates');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        rates = await res.json();
+        renderRates();
+      } catch (err) {
+        document.getElementById('rates-body').innerHTML =
+          `<tr><td colspan="4"><div class="empty error">${esc(err.message)}</div></td></tr>`;
+      }
+    })();
+  </script>
+</body>
+</html>

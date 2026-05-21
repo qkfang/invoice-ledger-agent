@@ -1,0 +1,7 @@
+{
+  "rates": [
+    { "from": "USD", "to": "AUD", "rate": 1.55 },
+    { "from": "EUR", "to": "AUD", "rate": 1.70 },
+    { "from": "GBP", "to": "AUD", "rate": 2.00 }
+  ]
+}

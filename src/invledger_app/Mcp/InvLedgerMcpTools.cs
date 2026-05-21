@@ -12,6 +12,7 @@ public class InvLedgerMcpTools
     private readonly ContentUnderstandingService _contentUnderstanding;
     private readonly NotificationService _notification;
     private readonly GeneralLedgerService _ledger;
+    private readonly FxRateService _fxRate;
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
@@ -19,12 +20,14 @@ public class InvLedgerMcpTools
         DocIntelligenceService docIntelligence,
         ContentUnderstandingService contentUnderstanding,
         NotificationService notification,
-        GeneralLedgerService ledger)
+        GeneralLedgerService ledger,
+        FxRateService fxRate)
     {
         _docIntelligence = docIntelligence;
         _contentUnderstanding = contentUnderstanding;
         _notification = notification;
         _ledger = ledger;
+        _fxRate = fxRate;
     }
 
     [McpServerTool(Name = "extractDoc_DI"),
@@ -147,6 +150,45 @@ public class InvLedgerMcpTools
         return _ledger.DeleteEntry(id)
             ? $"Deleted ledger entry '{id}'."
             : $"Error: ledger entry '{id}' not found.";
+    }
+
+    [McpServerTool(Name = "fx_convert"),
+     Description("Convert a monetary amount from one currency to AUD using the configured exchange rates.")]
+    public string FxConvert(
+        [Description("Source currency code, e.g. USD")] string fromCurrency,
+        [Description("Target currency code, e.g. AUD")] string toCurrency,
+        [Description("Amount to convert")] decimal amount)
+    {
+        if (string.IsNullOrWhiteSpace(fromCurrency) || string.IsNullOrWhiteSpace(toCurrency))
+            return "Error: fromCurrency and toCurrency are required.";
+
+        var from = fromCurrency.ToUpperInvariant();
+        var to = toCurrency.ToUpperInvariant();
+
+        if (from == to)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                from,
+                to,
+                amount,
+                rate = 1.0m,
+                convertedAmount = amount
+            }, JsonOptions);
+        }
+
+        var rate = _fxRate.GetRate(from, to);
+        if (rate is null)
+            return $"Error: no exchange rate found for {from} to {to}.";
+
+        return JsonSerializer.Serialize(new
+        {
+            from,
+            to,
+            amount,
+            rate = rate.Value,
+            convertedAmount = Math.Round(amount * rate.Value, 2)
+        }, JsonOptions);
     }
 
     private static DateTime? ParseDate(string? value)

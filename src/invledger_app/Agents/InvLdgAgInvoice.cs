@@ -17,6 +17,12 @@ public class InvLdgAgInvoice : BaseAgent
           - categories: each with categoryName, categoryTotal
           - lineItems: each with categoryName, description, quantity, unitPrice, lineTotal
         Make sure the sum of lineItems within a category equals the categoryTotal, and the sum of categoryTotals equals totalAmount.
-        Return a single JSON object with the structure above. No text outside the JSON.
+        After extracting all amounts, use the fx_convert tool to convert each monetary value from the invoice currency to AUD:
+          - Convert totalAmount → audTotalAmount on the invoice header.
+          - Convert each categoryTotal → audCategoryTotal on every category.
+          - Convert each lineTotal → audLineTotal on every line item.
+          - If the invoice currency is already AUD, set each aud* field equal to the corresponding original amount.
+          - If no exchange rate is available, omit the aud* fields from the output.
+        Return a single JSON object with the structure above including all aud* fields. No text outside the JSON.
         """;
 }

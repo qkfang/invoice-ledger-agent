@@ -62,6 +62,7 @@ builder.Services.AddSingleton(sp => new ContentUnderstandingService(
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<PendingApprovalStore>();
 builder.Services.AddSingleton<GeneralLedgerService>();
+builder.Services.AddSingleton<FxRateService>();
 
 builder.Services.AddMcpServer()
     .WithHttpTransport(options => { options.Stateless = true; })
@@ -131,6 +132,7 @@ var blobStorage = app.Services.GetRequiredService<BlobStorageService>();
 var notificationService = app.Services.GetRequiredService<NotificationService>();
 var approvalStore = app.Services.GetRequiredService<PendingApprovalStore>();
 
-app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent, docService, cuService, blobStorage, notificationService, approvalStore, logger);
+var fxRateService = app.Services.GetRequiredService<FxRateService>();
+app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent, docService, cuService, blobStorage, notificationService, approvalStore, fxRateService, logger);
 
 await app.RunAsync();
