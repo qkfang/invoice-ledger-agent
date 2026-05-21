@@ -62,22 +62,23 @@
       const invByCategory = {};
       for (const inv of invoices) {
         for (const cat of (inv.categories || [])) {
-          if (!invByCategory[cat.categoryName]) invByCategory[cat.categoryName] = [];
+          const key = cat.categoryName.trim().toLowerCase();
+          if (!invByCategory[key]) invByCategory[key] = [];
           for (const li of (cat.lineItems || [])) {
-            invByCategory[cat.categoryName].push({ ...li, invoiceId: inv.invoiceId, currency: inv.currency });
+            invByCategory[key].push({ ...li, invoiceId: inv.invoiceId, currency: inv.currency });
           }
         }
       }
 
       const blocks = ledger.categories.map(c => {
-        const invItems = invByCategory[c.categoryName] || [];
+        const invItems = invByCategory[c.categoryName.trim().toLowerCase()] || [];
         const invRows = invItems.length
           ? invItems.map(li => `
               <tr>
                 <td>${esc(li.invoiceId)}</td>
                 <td>${esc(li.description)}</td>
-                <td>${fmtMoney(li.unitPrice, ledger.currency)}</td>
-                <td>${fmtMoney(li.lineTotal, ledger.currency)}</td>
+                <td>${fmtMoney(li.unitPrice, li.currency)}</td>
+                <td>${fmtMoney(li.lineTotal, li.currency)}</td>
               </tr>`).join('')
           : `<tr><td colspan="4" class="empty" style="padding:10px 8px;">No invoice items.</td></tr>`;
         return `
