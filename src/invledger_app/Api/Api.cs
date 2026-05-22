@@ -232,8 +232,9 @@ public static class Endpoints
                 return Results.BadRequest(new { error = "json is required" });
 
             logger.LogInformation("Processing run request ({Length} chars)", request.Json.Length);
-            var response = await processingAgent.RunAsync(request.Json);
-            return Results.Ok(new { response });
+            var input = $"Process the following invoice. Use the get_approved_ledger MCP tool to fetch the current approved ledger and get_processing_rules to fetch the processing rules, then apply them to each line item.\n\nInvoice:\n{request.Json}";
+            var response = await processingAgent.RunAsync(input);
+            return Results.Ok(new { input, response });
         });
 
         app.MapPost("/exception/draft", async (JsonRequest request) =>

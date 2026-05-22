@@ -17,6 +17,8 @@
     .rule-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: #eef2ff; color: var(--primary); }
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .io-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 0.8rem; white-space: pre-wrap; font-family: ui-monospace, Menlo, monospace; max-height: 260px; overflow: auto; }
+    .reasoning-text { color: var(--muted); font-size: 0.78rem; font-style: italic; }
   </style>
 </head>
 <body>
@@ -26,11 +28,6 @@
     <div class="subtitle">The processing agent matches each invoice line item against the approved ledger using category, sub-item and dollar checks.</div>
 
     <div class="card">
-      <h2>Matching Rules</h2>
-      <div id="rules-area"><div class="empty">Loading...</div></div>
-    </div>
-
-    <div class="card">
       <h2>Run Processing</h2>
       <div id="scenario-banner"></div>
       <div class="row">
@@ -38,6 +35,18 @@
         <select id="invoice-select"></select>
       </div>
       <button id="btn-run">Run Processing Agent</button>
+    </div>
+
+    <div class="card">
+      <h2>Processing Rules</h2>
+      <div id="rules-area"><div class="empty">Loading...</div></div>
+    </div>
+
+    <div class="card" id="io-card" style="display:none;">
+      <h2>Agent Input</h2>
+      <div id="input-area" class="io-box"></div>
+      <h2 style="margin-top:16px;">Agent Output</h2>
+      <div id="output-area" class="io-box"></div>
     </div>
 
     <div class="card">
@@ -53,7 +62,7 @@
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-processing']);
     renderEmailFolderBanner('email-folder-banner');
 
-    let invoices = [], ledger = null, rules = [];
+    let invoices = [];
 
     function setRunLoading(loading) {
       const b = document.getElementById('btn-run');
@@ -61,7 +70,7 @@
       b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Run Processing Agent';
     }
 
-    function renderRules() {
+    function renderRules(rules) {
       const rows = rules.map(r => `
         <tr>
           <td><span class="rule-pill">${esc(r.id)}</span></td>
@@ -93,6 +102,7 @@
           <td><span class="rule-pill">${esc(r.ruleApplied)}</span></td>
           <td>${statusBadge(r.status)}${r.humanInLoop ? ' <span class="rule-pill" style="background:#fef3c7;color:#92400e;">HITL</span>' : ''}</td>
           <td style="color:var(--muted);">${esc(r.reason)}</td>
+          <td class="reasoning-text">${esc(r.reasoning)}</td>
         </tr>`).join('');
 
       document.getElementById('result-area').innerHTML = `
@@ -105,12 +115,18 @@
         <table class="data">
           <thead><tr>
             <th>Category</th><th>Description</th><th>Unit Price</th><th>Line Total</th>
-            <th>Ledger Match</th><th>Rule</th><th>Status</th><th>Reason</th>
+            <th>Ledger Match</th><th>Rule</th><th>Status</th><th>Reason</th><th>Reasoning</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <h3 style="margin-top:14px;font-size:0.9rem;">Agent notes</h3>
         <div class="notes-box">${esc(result.notes)}</div>`;
+    }
+
+    function parseAgentJson(text) {
+      const m = text && text.match(/\{[\s\S]*\}/);
+      if (!m) return null;
+      try { return JSON.parse(m[0]); } catch { return null; }
     }
 
     document.getElementById('btn-run').addEventListener('click', async () => {
@@ -119,17 +135,24 @@
       if (!inv) return;
       setRunLoading(true);
       document.getElementById('result-area').innerHTML = '<div class="empty">Running agent...</div>';
+      const ioCard = document.getElementById('io-card');
+      ioCard.style.display = 'none';
       try {
-        const message = `Process the following invoice against the provided ledger and rules.\n\nInvoice:\n${JSON.stringify(inv, null, 2)}\n\nApproved Ledger:\n${JSON.stringify(ledger, null, 2)}\n\nMatching Rules:\n${JSON.stringify(rules, null, 2)}`;
         const res = await fetch('/processing/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json: message })
+          body: JSON.stringify({ json: JSON.stringify(inv, null, 2) })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        const m = data.response && data.response.match(/\{[\s\S]*\}/);
-        const result = m ? (() => { try { return JSON.parse(m[0]); } catch { return null; } })() : null;
+
+        if (data.input || data.response) {
+          document.getElementById('input-area').textContent = data.input || '';
+          document.getElementById('output-area').textContent = data.response || '';
+          ioCard.style.display = 'block';
+        }
+
+        const result = parseAgentJson(data.response);
         if (result) {
           renderResult(inv, result);
         } else {
@@ -145,8 +168,9 @@
     (async () => {
       try {
         const data = await loadWorkflowData();
-        invoices = data.invoices; ledger = data.ledger; rules = data.rules;
-        renderRules(); renderInvoiceOptions();
+        invoices = data.invoices;
+        renderRules(data.rules);
+        renderInvoiceOptions();
         const scenario = getScenario();
         if (scenario) {
           const sel = document.getElementById('invoice-select');
