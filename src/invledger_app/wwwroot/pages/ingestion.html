@@ -115,8 +115,8 @@
     </div>
   </main>
 
-  <script src="../assets/app.js?v=20260517"></script>
-  <script src="../assets/workflow.js?v=20260517"></script>
+  <script src="../assets/app.js?v=20260521"></script>
+  <script src="../assets/workflow.js?v=20260521"></script>
   <script>
     renderHeader('Ingestion');
 
@@ -168,6 +168,8 @@
           <div class="email-meta-row"><span class="email-meta-key">Date</span><span class="email-meta-val">${esc(email.date)}</span></div>
         </div>
         <div class="email-body">${esc(email.body)}</div>`;
+      const firstInvoiceId = email.attachments?.[0]?.invoiceId;
+      if (firstInvoiceId) setScenario(firstInvoiceId);
       renderAttachments(email.attachments);
     }
 
