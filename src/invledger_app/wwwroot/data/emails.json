@@ -1,0 +1,43 @@
+{
+  "emails": [
+    {
+      "id": 1,
+      "from": "billing@northwind-supplies.com",
+      "fromName": "Northwind Office Supplies",
+      "to": "ap@company.com",
+      "subject": "Invoice INV-2026-0001 – May Office Supplies",
+      "date": "2026-05-12",
+      "preview": "Please find attached our invoice for May 2026 office supply delivery.",
+      "body": "Dear Accounts Payable Team,\n\nPlease find attached our invoice #INV-2026-0001 for office supplies and IT equipment delivered in May 2026.\n\nTotal Amount: USD 1,842.50\nDue Date: June 11, 2026\n\nKindly process payment at your earliest convenience. For any queries, please contact our billing department.\n\nBest regards,\nNorthwind Office Supplies Billing Team",
+      "attachments": [
+        { "name": "northwind-may.pdf", "invoiceId": "INV-2026-0001", "sampleRef": 1 }
+      ]
+    },
+    {
+      "id": 2,
+      "from": "invoices@globex-consulting.com",
+      "fromName": "Globex Consulting",
+      "to": "ap@company.com",
+      "subject": "Invoice INV-2026-0002 – April Professional Services",
+      "date": "2026-05-09",
+      "preview": "Attached is our invoice for consulting services rendered in April 2026.",
+      "body": "Dear Accounts Payable Team,\n\nPlease find enclosed invoice #INV-2026-0002 for professional services and travel expenses incurred during our April 2026 engagement.\n\nTotal Amount: USD 7,350.00\nDue Date: June 8, 2026\n\nPayment terms: Net 30. Please reference the invoice number when making payment.\n\nThank you for your continued business.\n\nBest regards,\nGlobex Consulting – Finance Department",
+      "attachments": [
+        { "name": "globex-consulting-april.pdf", "invoiceId": "INV-2026-0002", "sampleRef": 2 }
+      ]
+    },
+    {
+      "id": 3,
+      "from": "billing@cascade-logistics.com",
+      "fromName": "Cascade Logistics",
+      "to": "ap@company.com",
+      "subject": "Invoice INV-2026-0003 – Shipping & Freight Services",
+      "date": "2026-05-14",
+      "preview": "Attached shipping invoice for freight services completed in May 2026.",
+      "body": "Dear Accounts Payable Team,\n\nPlease find attached invoice #INV-2026-0003 covering domestic freight and express courier services provided in May 2026.\n\nTotal Amount: USD 2,480.00\nDue Date: June 13, 2026\n\nPlease ensure payment is made by the due date to avoid late fees. Contact us at billing@cascade-logistics.com if you have any questions.\n\nThank you,\nCascade Logistics – Accounts Receivable",
+      "attachments": [
+        { "name": "cascade-logistics-shipping.pdf", "invoiceId": "INV-2026-0003", "sampleRef": 3 }
+      ]
+    }
+  ]
+}

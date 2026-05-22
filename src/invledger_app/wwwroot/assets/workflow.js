@@ -159,6 +159,18 @@ function buildNotes(invoice, summary, results) {
   return parts.join('\n');
 }
 
+// Render a scenario context banner into the element with the given id.
+// Pass the full invoices array so the vendor / date / total can be shown.
+function renderScenarioBanner(containerId, invoices) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const id = getScenario();
+  if (!id) { el.innerHTML = ''; return; }
+  const inv = Array.isArray(invoices) ? invoices.find(i => i.invoiceId === id) : null;
+  if (!inv) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="scenario-banner">📋 Active scenario: <strong>${esc(inv.invoiceId)}</strong> · ${esc(inv.vendorName)} · ${esc(inv.invoiceDate)} · ${fmtMoney(inv.totalAmount, inv.currency)}</div>`;
+}
+
 function statusBadge(status) {
   const map = {
     matched: ['#dcfce7', '#166534'],

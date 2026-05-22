@@ -10,6 +10,84 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .field-grid { display: grid; grid-template-columns: 160px 1fr; gap: 6px 14px; font-size: 0.9rem; }
     .field-grid .k { color: var(--muted); font-weight: 600; }
+
+    /* Email inbox layout */
+    .email-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--card);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      margin-bottom: 18px;
+      min-height: 340px;
+    }
+    @media (max-width: 700px) { .email-layout { grid-template-columns: 1fr; } }
+
+    .email-list {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      max-height: 420px;
+    }
+    .email-list-header {
+      padding: 12px 14px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+      background: var(--input-bg);
+    }
+    .email-item {
+      padding: 11px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    .email-item:last-child { border-bottom: none; }
+    .email-item:hover { background: #f0f4ff; }
+    .email-item.selected { background: #eef2ff; border-left: 3px solid var(--primary); padding-left: 11px; }
+    .email-item-from { font-size: 0.82rem; font-weight: 700; color: var(--text); display: flex; justify-content: space-between; }
+    .email-item-date { font-size: 0.72rem; color: var(--muted); font-weight: 400; }
+    .email-item-subject { font-size: 0.8rem; color: #444; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .email-item-preview { font-size: 0.75rem; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .email-unread-dot { display: inline-block; width: 7px; height: 7px; background: var(--primary); border-radius: 50%; margin-right: 5px; flex-shrink: 0; margin-top: 4px; }
+
+    .email-detail {
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: auto;
+    }
+    .email-detail-empty { display: flex; align-items: center; justify-content: center; flex: 1; }
+    .email-meta-row { display: flex; gap: 6px; font-size: 0.83rem; }
+    .email-meta-key { color: var(--muted); font-weight: 600; min-width: 60px; }
+    .email-meta-val { color: var(--text); }
+    .email-subject-line { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .email-body {
+      background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 12px 14px; font-size: 0.85rem; color: #333; white-space: pre-wrap; line-height: 1.6;
+    }
+
+    /* Attachments / document table */
+    table.data { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    table.data th, table.data td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    table.data tr:last-child td { border-bottom: none; }
+
+    .btn-fabric {
+      background: #7c3aed; color: #fff; border: none; border-radius: 6px;
+      padding: 5px 13px; font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .btn-fabric:hover:not(:disabled) { background: #6d28d9; }
+    .btn-fabric:disabled { background: #c4b5fd; cursor: not-allowed; }
+    .fabric-status { font-size: 0.75rem; margin-left: 8px; }
+    .fabric-status.ok { color: #166534; }
+    .fabric-status.err { color: #991b1b; }
   </style>
 </head>
 <body>
@@ -17,9 +95,21 @@
     <h1>Ingestion Screen <span id="agent-info-host"></span></h1>
     <div class="subtitle">The ingestion agent receives incoming vendor invoice documents into the inbox.</div>
 
-    <div class="card">
-      <h2>Inbox</h2>
-      <div id="inbox-area"><div class="empty">Loading...</div></div>
+    <!-- Email Inbox -->
+    <div class="email-layout" id="email-layout">
+      <div class="email-list">
+        <div class="email-list-header">📧 Inbox</div>
+        <div id="email-list-body"><div class="empty" style="padding:20px;">Loading…</div></div>
+      </div>
+      <div class="email-detail" id="email-detail">
+        <div class="email-detail-empty"><div class="empty">Select an email to view details and attachments.</div></div>
+      </div>
+    </div>
+
+    <!-- Documents / Attachments (shown after email selection) -->
+    <div class="card" id="attachments-card" style="display:none;">
+      <h2>📎 Attachments</h2>
+      <div id="attachments-area"></div>
     </div>
 
     <div class="card">
@@ -34,8 +124,8 @@
     </div>
   </main>
 
-  <script src="../assets/app.js?v=20260517"></script>
-  <script src="../assets/workflow.js?v=20260517"></script>
+  <script src="../assets/app.js?v=20260521"></script>
+  <script src="../assets/workflow.js?v=20260521"></script>
   <script>
     renderHeader('Ingestion');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-ingestion']);
@@ -97,26 +187,141 @@
       }
     }
 
+    let allInvoices = [];
+    let allEmails = [];
+
+    async function loadEmails() {
+      const inPages = location.pathname.includes('/pages/');
+      const prefix = inPages ? '../' : '';
+      const res = await fetch(prefix + 'data/emails.json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.emails;
+    }
+
+    function renderEmailList(emails) {
+      const body = document.getElementById('email-list-body');
+      if (!emails.length) { body.innerHTML = '<div class="empty" style="padding:20px;">No emails.</div>'; return; }
+      body.innerHTML = emails.map((e, i) => `
+        <div class="email-item" data-id="${e.id}" tabindex="0" role="button" aria-label="Email from ${esc(e.fromName)}">
+          <div class="email-item-from">
+            <span><span class="email-unread-dot"></span>${esc(e.fromName)}</span>
+            <span class="email-item-date">${esc(e.date)}</span>
+          </div>
+          <div class="email-item-subject">${esc(e.subject)}</div>
+          <div class="email-item-preview">${esc(e.preview)}</div>
+        </div>`).join('');
+
+      body.querySelectorAll('.email-item').forEach(item => {
+        const select = () => {
+          body.querySelectorAll('.email-item').forEach(el => el.classList.remove('selected'));
+          item.classList.add('selected');
+          item.querySelector('.email-unread-dot')?.remove();
+          const email = emails.find(e => e.id === Number(item.dataset.id));
+          if (email) showEmailDetail(email);
+        };
+        item.addEventListener('click', select);
+        item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') select(); });
+      });
+    }
+
+    function showEmailDetail(email) {
+      const detail = document.getElementById('email-detail');
+      detail.innerHTML = `
+        <div class="email-subject-line">${esc(email.subject)}</div>
+        <div>
+          <div class="email-meta-row"><span class="email-meta-key">From</span><span class="email-meta-val">${esc(email.fromName)} &lt;${esc(email.from)}&gt;</span></div>
+          <div class="email-meta-row"><span class="email-meta-key">To</span><span class="email-meta-val">${esc(email.to)}</span></div>
+          <div class="email-meta-row"><span class="email-meta-key">Date</span><span class="email-meta-val">${esc(email.date)}</span></div>
+        </div>
+        <div class="email-body">${esc(email.body)}</div>`;
+      const firstInvoiceId = email.attachments?.[0]?.invoiceId;
+      if (firstInvoiceId) setScenario(firstInvoiceId);
+      renderAttachments(email.attachments);
+    }
+
+    function renderAttachments(attachments) {
+      const card = document.getElementById('attachments-card');
+      const area = document.getElementById('attachments-area');
+      card.style.display = '';
+
+      const invoiceMap = {};
+      allInvoices.forEach(inv => { invoiceMap[inv.invoiceId] = inv; });
+
+      const rows = attachments.map(att => {
+        const inv = invoiceMap[att.invoiceId] || {};
+        return `
+          <tr>
+            <td>📄 <strong>${esc(att.name)}</strong></td>
+            <td>${esc(inv.vendorName || '—')}</td>
+            <td>${esc(inv.invoiceDate || '—')}</td>
+            <td>${inv.totalAmount != null ? fmtMoney(inv.totalAmount, inv.currency) : '—'}</td>
+            <td>${statusBadge(inv.ingestionStatus || 'pending')}</td>
+            <td>
+              <button class="btn-fabric" data-name="${esc(att.name)}" data-ref="${att.sampleRef}" type="button">Save to Fabric</button>
+              <span class="fabric-status" id="fabric-status-${esc(att.invoiceId)}"></span>
+            </td>
+          </tr>`;
+      }).join('');
+
+      area.innerHTML = `
+        <table class="data">
+          <thead><tr><th>Document</th><th>Vendor</th><th>Invoice Date</th><th>Total</th><th>Status</th><th>Fabric</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+
+      area.querySelectorAll('.btn-fabric').forEach(btn => {
+        btn.addEventListener('click', () => saveToFabric(btn));
+      });
+    }
+
+    async function saveToFabric(btn) {
+      const docName = btn.dataset.name;
+      const sampleRef = btn.dataset.ref;
+      const statusEl = btn.nextElementSibling;
+
+      btn.disabled = true;
+      statusEl.textContent = 'Uploading…';
+      statusEl.className = 'fabric-status';
+
+      try {
+        const inPages = location.pathname.includes('/pages/');
+        const prefix = inPages ? '..' : '';
+        const imgRes = await fetch(`${prefix}/samples/sample${sampleRef}.png`);
+        if (!imgRes.ok) throw new Error(`Could not load sample file: HTTP ${imgRes.status}`);
+        const blob = await imgRes.blob();
+        const file = new File([blob], docName, { type: 'application/pdf' });
+
+        const form = new FormData();
+        form.append('file', file);
+
+        const res = await fetch('/ingestion/save-to-fabric', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+        statusEl.textContent = '✓ Saved';
+        statusEl.className = 'fabric-status ok';
+        btn.textContent = 'Saved ✓';
+        btn.disabled = true;
+      } catch (err) {
+        statusEl.textContent = `✗ ${err.message}`;
+        statusEl.className = 'fabric-status err';
+        btn.disabled = false;
+      }
+    }
+
     (async () => {
       try {
-        const { invoices: data } = await loadWorkflowData();
-        invoices = data;
-        renderInvoiceOptions();
-        const rows = invoices.map(inv => `
-          <tr>
-            <td><strong>${esc(inv.documentName)}</strong></td>
-            <td>${esc(inv.vendorName)}</td>
-            <td>${esc(inv.invoiceDate)}</td>
-            <td>${fmtMoney(inv.totalAmount, inv.currency)}</td>
-            <td>${statusBadge(inv.ingestionStatus)}</td>
-          </tr>`).join('');
-        document.getElementById('inbox-area').innerHTML = `
-          <table class="data">
-            <thead><tr><th>Document</th><th>Vendor</th><th>Invoice Date</th><th>Total</th><th>Status</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>`;
+        const [{ invoices }, emails] = await Promise.all([loadWorkflowData(), loadEmails()]);
+        allInvoices = invoices;
+        allEmails = emails;
+        renderEmailList(emails);
+        document.getElementById('inv-select').innerHTML = invoices.map(i =>
+          `<option value="${esc(i.invoiceId)}">${esc(i.invoiceId)} — ${esc(i.vendorName)}</option>`
+        ).join('');
       } catch (err) {
-        document.getElementById('inbox-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
+        document.getElementById('email-list-body').innerHTML =
+          `<div class="empty" style="padding:20px;color:#991b1b;">${esc(err.message)}</div>`;
       }
     })();
   </script>

@@ -204,6 +204,15 @@ function mountAgentInstructionsPanel(hostId, agentIds) {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') popover.classList.remove('open'); });
 }
 
+// Scenario: persist the selected invoice ID across all tabs via localStorage.
+function setScenario(invoiceId) {
+  localStorage.setItem('inv_scenario', invoiceId || '');
+}
+
+function getScenario() {
+  return localStorage.getItem('inv_scenario') || '';
+}
+
 // Markdown rendering powered by marked + DOMPurify (loaded via CDN in pages that need it).
 function renderMarkdown(md) {
   if (md == null || md === '') return '<div class="empty">No content.</div>';

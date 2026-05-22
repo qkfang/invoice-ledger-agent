@@ -22,7 +22,9 @@ public static class Endpoints
         InvLdgAgLedger ledgerAgent,
         DocIntelligenceService docService, ContentUnderstandingService cuService,
         BlobStorageService blobStorage, NotificationService notificationService,
-        PendingApprovalStore approvalStore, FxRateService fxRateService, ILogger logger)
+        PendingApprovalStore approvalStore, FxRateService fxRateService,
+        FabricLakehouseService? fabricLakehouse,
+        ILogger logger)
     {
         app.MapGet("/agents/instructions", () =>
         {
@@ -232,6 +234,25 @@ public static class Endpoints
             logger.LogInformation("Ledger ask request ({Length} chars)", request.Json.Length);
             var response = await ledgerAgent.RunAsync(request.Json);
             return Results.Ok(new { response });
+        });
+
+        app.MapPost("/ingestion/save-to-fabric", async (HttpRequest http) =>
+        {
+            if (!http.HasFormContentType)
+                return Results.BadRequest(new { error = "multipart/form-data required" });
+
+            var form = await http.ReadFormAsync();
+            var file = form.Files.FirstOrDefault();
+            if (file is null || file.Length == 0)
+                return Results.BadRequest(new { error = "file is required" });
+
+            if (fabricLakehouse is null)
+                return Results.BadRequest(new { error = "Fabric Lakehouse is not configured. Set FABRIC_LAKEHOUSE_WORKSPACE_ID and FABRIC_LAKEHOUSE_ID." });
+
+            logger.LogInformation("Save to Fabric: {FileName} ({Size} bytes)", Sanitize(file.FileName), file.Length);
+            using var stream = file.OpenReadStream();
+            var path = await fabricLakehouse.UploadAsync(stream, file.FileName, file.Length);
+            return Results.Ok(new { path, documentName = file.FileName });
         });
 
         app.MapGet("/fx-rates", () => Results.Ok(fxRateService.GetRates()));

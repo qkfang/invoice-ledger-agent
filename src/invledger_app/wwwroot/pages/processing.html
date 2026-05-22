@@ -31,6 +31,7 @@
 
     <div class="card">
       <h2>Run Processing</h2>
+      <div id="scenario-banner"></div>
       <div class="row">
         <label for="invoice-select">Invoice</label>
         <select id="invoice-select"></select>
@@ -44,8 +45,8 @@
     </div>
   </main>
 
-  <script src="../assets/app.js?v=20260517"></script>
-  <script src="../assets/workflow.js?v=20260517"></script>
+  <script src="../assets/app.js?v=20260521"></script>
+  <script src="../assets/workflow.js?v=20260521"></script>
   <script>
     renderHeader('Processing');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-processing']);
@@ -144,6 +145,13 @@
         const data = await loadWorkflowData();
         invoices = data.invoices; ledger = data.ledger; rules = data.rules;
         renderRules(); renderInvoiceOptions();
+        const scenario = getScenario();
+        if (scenario) {
+          const sel = document.getElementById('invoice-select');
+          const opt = [...sel.options].find(o => o.value === scenario);
+          if (opt) sel.value = scenario;
+        }
+        renderScenarioBanner('scenario-banner', invoices);
       } catch (err) {
         document.getElementById('rules-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
       }

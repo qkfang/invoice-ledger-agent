@@ -29,6 +29,7 @@
     <div class="grid-2">
       <div class="card">
         <h2>Ingested Invoices</h2>
+        <div id="scenario-banner"></div>
         <div id="list-area" class="invoice-list"><div class="empty">Loading...</div></div>
         <button id="btn-run" style="margin-top:12px;" disabled>Run Invoice Agent</button>
         <div id="run-status" style="margin-top:6px;font-size:0.82rem;color:var(--muted);"></div>
@@ -45,8 +46,8 @@
     </div>
   </main>
 
-  <script src="../assets/app.js?v=20260517"></script>
-  <script src="../assets/workflow.js?v=20260517"></script>
+  <script src="../assets/app.js?v=20260521"></script>
+  <script src="../assets/workflow.js?v=20260521"></script>
   <script>
     renderHeader('Invoice');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-invoice']);
@@ -71,7 +72,10 @@
         b.addEventListener('click', () => {
           selectedId = b.dataset.id;
           document.getElementById('btn-run').disabled = false;
-          renderList(); renderDetail();
+          setScenario(selectedId);
+          renderScenarioBanner('scenario-banner', invoices);
+          renderList();
+          renderDetail();
         });
       });
     }
@@ -121,7 +125,10 @@
         const data = await loadWorkflowData();
         invoices = data.invoices;
         fxRates = data.fxRates || [];
-        selectedId = invoices[0]?.invoiceId || null;
+        const scenario = getScenario();
+        const scenarioExists = scenario && invoices.find(i => i.invoiceId === scenario);
+        selectedId = scenarioExists ? scenario : (invoices[0]?.invoiceId || null);
+        renderScenarioBanner('scenario-banner', invoices);
         renderList(); renderDetail();
         document.getElementById('btn-run').disabled = !selectedId;
       } catch (err) {
