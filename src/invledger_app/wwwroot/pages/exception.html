@@ -11,17 +11,14 @@
     table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
     .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
     .email-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 0.85rem; white-space: pre-wrap; margin-top: 8px; font-family: ui-monospace, Menlo, monospace; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <main>
-    <h1>Exception Screen</h1>
+    <h1>Exception Screen <span id="agent-info-host"></span></h1>
     <div class="subtitle">Invoice line items that could not be mapped to the ledger. The exception agent routes each to the responsible team.</div>
-
-    <div class="card agent-card">
-      <h2>Exception Agent</h2>
-      <div class="subtitle" style="margin:0;">For every exception line item, picks the right team (procurement, finance, or vendor-management), drafts a notification email, and sends it via the notification tool.</div>
-    </div>
 
     <div class="card">
       <h2>Exceptions</h2>
@@ -40,37 +37,14 @@
   <script src="../assets/workflow.js?v=20260521"></script>
   <script>
     renderHeader('Exception');
+    mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-exception']);
 
     let allExceptions = [];
 
-    function pickTeam(exc) {
-      if (!exc.matchedLedgerCategory) {
-        return { team: 'procurement', recipient: 'procurement@mailbox.local' };
-      }
-      if (exc.lineTotal > 1000) {
-        return { team: 'finance', recipient: 'finance@mailbox.local' };
-      }
-      return { team: 'vendor-management', recipient: 'vendor-management@mailbox.local' };
-    }
-
-    function buildEmail(exc) {
-      const { team, recipient } = pickTeam(exc);
-      const subject = `[Action] Unmatched invoice line — ${exc.invoiceId} / ${exc.description}`;
-      const body =
-`Hi ${team} team,
-
-Invoice ${exc.invoiceId} from ${exc.vendorName} contains a line item that could not be matched to the ledger.
-
-Category: ${exc.categoryName}
-Description: ${exc.description}
-Quantity: ${exc.quantity}
-Unit Price: ${fmtMoney(exc.unitPrice)}
-Line Total: ${fmtMoney(exc.lineTotal)}
-
-Reason: ${exc.reason}
-
-Please review and confirm the correct ledger mapping or reject the line item.`;
-      return { team, recipient, subject, body };
+    function setDraftLoading(loading) {
+      const b = document.getElementById('btn-draft');
+      b.disabled = loading;
+      b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Draft notifications';
     }
 
     function renderExceptions() {
@@ -94,22 +68,46 @@ Please review and confirm the correct ledger mapping or reject the line item.`;
         </table>`;
     }
 
-    document.getElementById('btn-draft').addEventListener('click', () => {
+    document.getElementById('btn-draft').addEventListener('click', async () => {
       if (!allExceptions.length) {
         document.getElementById('draft-area').innerHTML = '<div class="empty">No exceptions to draft.</div>';
         return;
       }
-      document.getElementById('draft-area').innerHTML = allExceptions.map(e => {
-        const m = buildEmail(e);
-        return `
-          <div style="margin-bottom:14px;">
-            <div style="font-size:0.85rem;color:var(--muted);">Assigned team: <strong>${esc(m.team)}</strong> · Recipient: <code>${esc(m.recipient)}</code></div>
-            <div style="font-size:0.9rem;margin-top:4px;"><strong>${esc(m.subject)}</strong></div>
-            <div class="email-box">${esc(m.body)}</div>
-            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Send result: queued (simulated)</div>
-          </div>`;
-      }).join('');
+      setDraftLoading(true);
+      document.getElementById('draft-area').innerHTML = '<div class="empty">Running exception agent...</div>';
+      try {
+        const message = `The following invoice line items could not be matched to the approved ledger. Please process each exception, assign to the appropriate team, draft and send notification emails.\n\nExceptions:\n${JSON.stringify(allExceptions, null, 2)}`;
+        const res = await fetch('/exception/draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json: message })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        renderDraftResult(data.response);
+      } catch (err) {
+        document.getElementById('draft-area').innerHTML =
+          `<div class="empty error">Error: ${esc(err.message)}</div>`;
+      }
+      setDraftLoading(false);
     });
+
+    function renderDraftResult(response) {
+      const m = response && response.match(/\{[\s\S]*\}/);
+      const parsed = m ? (() => { try { return JSON.parse(m[0]); } catch { return null; } })() : null;
+      const items = parsed && Array.isArray(parsed.items) ? parsed.items : null;
+      if (items) {
+        document.getElementById('draft-area').innerHTML = items.map(it => `
+          <div style="margin-bottom:14px;">
+            <div style="font-size:0.85rem;color:var(--muted);">Assigned team: <strong>${esc(it.assignedTeam)}</strong> · Recipient: <code>${esc(it.recipient)}</code></div>
+            <div style="font-size:0.9rem;margin-top:4px;"><strong>${esc(it.subject)}</strong></div>
+            <div class="email-box">${esc(it.body)}</div>
+            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Send result: ${esc(it.sendResult)}</div>
+          </div>`).join('');
+      } else {
+        document.getElementById('draft-area').innerHTML = `<pre>${esc(response)}</pre>`;
+      }
+    }
 
     (async () => {
       try {
