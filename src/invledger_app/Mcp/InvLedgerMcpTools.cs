@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using InvLedgerAgent.Services;
+using Microsoft.AspNetCore.Hosting;
 using ModelContextProtocol.Server;
 
 namespace InvLedgerAgent.Mcp;
@@ -13,6 +14,7 @@ public class InvLedgerMcpTools
     private readonly NotificationService _notification;
     private readonly GeneralLedgerService _ledger;
     private readonly FxRateService _fxRate;
+    private readonly IWebHostEnvironment _env;
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
@@ -21,13 +23,15 @@ public class InvLedgerMcpTools
         ContentUnderstandingService contentUnderstanding,
         NotificationService notification,
         GeneralLedgerService ledger,
-        FxRateService fxRate)
+        FxRateService fxRate,
+        IWebHostEnvironment env)
     {
         _docIntelligence = docIntelligence;
         _contentUnderstanding = contentUnderstanding;
         _notification = notification;
         _ledger = ledger;
         _fxRate = fxRate;
+        _env = env;
     }
 
     [McpServerTool(Name = "extractDoc_DI"),
@@ -194,6 +198,22 @@ public class InvLedgerMcpTools
             rate = rate.Value,
             convertedAmount = Math.Round(amount * rate.Value, 2)
         }, JsonOptions);
+    }
+
+    [McpServerTool(Name = "get_approved_ledger"),
+     Description("Return the approved general ledger — categories, sub-items, expected unit prices, aliases, budget, and posted history — used to match invoice line items.")]
+    public string GetApprovedLedger()
+    {
+        var path = Path.Combine(_env.WebRootPath, "data", "ledger.json");
+        return File.Exists(path) ? File.ReadAllText(path) : $"Error: approved ledger file not found at {path}.";
+    }
+
+    [McpServerTool(Name = "get_processing_rules"),
+     Description("Return the processing rules that define how invoice line items are matched, reviewed, or escalated.")]
+    public string GetProcessingRules()
+    {
+        var path = Path.Combine(_env.WebRootPath, "data", "rules.json");
+        return File.Exists(path) ? File.ReadAllText(path) : $"Error: processing rules file not found at {path}.";
     }
 
     private static DateTime? ParseDate(string? value)
