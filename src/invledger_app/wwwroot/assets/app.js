@@ -19,7 +19,7 @@ function renderHeader(activeKey) {
   }).join('');
   document.body.insertAdjacentHTML('afterbegin', `
     <header>
-      <div class="brand">Notice Intelligence</div>
+      <div class="brand">Invoice Intelligence</div>
       <nav>${links}</nav>
     </header>
   `);
