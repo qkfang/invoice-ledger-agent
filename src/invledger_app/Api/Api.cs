@@ -206,6 +206,25 @@ public static class Endpoints
             return Results.Ok(new { response });
         });
 
+        app.MapPost("/invoice/process-doc", async (HttpRequest http) =>
+        {
+            if (!http.HasFormContentType)
+                return Results.BadRequest(new { error = "multipart/form-data required" });
+
+            var form = await http.ReadFormAsync();
+            var file = form.Files.FirstOrDefault();
+            if (file is null || file.Length == 0)
+                return Results.BadRequest(new { error = "file is required" });
+
+            logger.LogInformation("Invoice process-doc: {FileName} ({Size} bytes)", Sanitize(file.FileName), file.Length);
+            using var stream = file.OpenReadStream();
+            var blobUrl = await blobStorage.UploadAsync(stream, file.FileName);
+            var cuResult = await cuService.AnalyzeFromUrlAsync(blobUrl);
+            var response = await invoiceAgent.RunAsync(
+                $"Extract structured invoice details from this document. Use the extractDoc_CU tool with this document URL: {blobUrl}");
+            return Results.Ok(new { markdown = cuResult.Markdown, json = cuResult.Json, response });
+        });
+
         app.MapPost("/processing/run", async (JsonRequest request) =>
         {
             if (string.IsNullOrWhiteSpace(request.Json))

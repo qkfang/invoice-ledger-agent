@@ -12,7 +12,10 @@ public class InvLdgAgInvoice : BaseAgent
     }
 
     private static string GetInstructions() => """
-        You are an invoice extraction agent. Given an ingested vendor invoice document, extract structured invoice details:
+        You are an invoice extraction agent. Given a vendor invoice, extract structured invoice details.
+
+        If the input is a document URL, first call the extractDoc_CU tool with that URL to read the document content.
+        Then extract the following fields from the content:
           - invoiceId, vendorName, invoiceDate, dueDate, currency, totalAmount
           - categories: each with categoryName, categoryTotal
           - lineItems: each with categoryName, description, quantity, unitPrice, lineTotal
