@@ -157,7 +157,8 @@ public class InvLedgerMcpTools
     public string FxConvert(
         [Description("Source currency code, e.g. USD")] string fromCurrency,
         [Description("Target currency code, e.g. AUD")] string toCurrency,
-        [Description("Amount to convert")] decimal amount)
+        [Description("Amount to convert")] decimal amount,
+        [Description("Invoice date (ISO-8601, e.g. 2025-03-15) used to look up the rate for the applicable period. Defaults to today.")] string? invoiceDate = null)
     {
         if (string.IsNullOrWhiteSpace(fromCurrency) || string.IsNullOrWhiteSpace(toCurrency))
             return "Error: fromCurrency and toCurrency are required.";
@@ -177,7 +178,11 @@ public class InvLedgerMcpTools
             }, JsonOptions);
         }
 
-        var rate = _fxRate.GetRate(from, to);
+        DateOnly? date = null;
+        if (!string.IsNullOrWhiteSpace(invoiceDate) && DateOnly.TryParse(invoiceDate, out var parsed))
+            date = parsed;
+
+        var rate = _fxRate.GetRate(from, to, date);
         if (rate is null)
             return $"Error: no exchange rate found for {from} to {to}.";
 

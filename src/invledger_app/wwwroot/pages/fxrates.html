@@ -9,7 +9,8 @@
     table.rates { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     table.rates th, table.rates td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     table.rates th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
-    table.rates input { width: 100px; }
+    table.rates input[type="date"] { width: 140px; }
+    table.rates input[type="number"] { width: 110px; }
     .add-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-top: 14px; }
     .add-row label { margin-bottom: 4px; }
     .row-actions { display: flex; gap: 6px; }
@@ -18,16 +19,16 @@
 <body>
   <main>
     <h1>FX Rates</h1>
-    <div class="subtitle">Configure exchange rates used to convert invoice amounts to AUD.</div>
+    <div class="subtitle">USD to AUD exchange rates by period, used to convert invoice amounts.</div>
 
     <div class="card">
-      <h2>Exchange Rate Configuration</h2>
+      <h2>USD → AUD Rate by Period</h2>
       <div id="notice-area"></div>
       <table class="rates" id="rates-table">
         <thead>
           <tr>
-            <th>From</th>
-            <th>To</th>
+            <th>From Date</th>
+            <th>To Date</th>
             <th>Rate</th>
             <th style="width:160px;"></th>
           </tr>
@@ -39,12 +40,12 @@
 
       <div class="add-row" id="add-form">
         <div>
-          <label>From Currency</label>
-          <input type="text" id="add-from" placeholder="USD" maxlength="10" style="text-transform:uppercase;" />
+          <label>From Date</label>
+          <input type="date" id="add-fromDate" />
         </div>
         <div>
-          <label>To Currency</label>
-          <input type="text" id="add-to" placeholder="AUD" maxlength="10" style="text-transform:uppercase;" />
+          <label>To Date <span style="font-size:0.8em;color:var(--muted);">(leave blank = open)</span></label>
+          <input type="date" id="add-toDate" />
         </div>
         <div>
           <label>Rate</label>
@@ -59,9 +60,8 @@
     <div class="card">
       <h2>How It Works</h2>
       <p style="font-size:0.9rem;color:var(--muted);line-height:1.6;">
-        The invoice agent calls the <code>fx_convert</code> MCP tool to convert each invoice line total,
-        category total, and the invoice total amount from the invoice currency to AUD.
-        The rates configured here are loaded by the tool at runtime.
+        The invoice agent calls the <code>fx_convert</code> MCP tool with the invoice date to look up
+        the applicable USD→AUD rate for that period. The rates configured here are loaded at runtime.
         Changes take effect immediately for new agent runs.
       </p>
     </div>
@@ -87,8 +87,8 @@
       }
       tbody.innerHTML = rates.map((r, i) => `
         <tr data-index="${i}">
-          <td><input type="text" class="r-from" value="${esc(r.from)}" maxlength="10" style="text-transform:uppercase;width:90px;" /></td>
-          <td><input type="text" class="r-to" value="${esc(r.to)}" maxlength="10" style="text-transform:uppercase;width:90px;" /></td>
+          <td><input type="date" class="r-fromDate" value="${esc(r.fromDate || '')}" /></td>
+          <td><input type="date" class="r-toDate" value="${esc(r.toDate || '')}" /></td>
           <td><input type="number" class="r-rate" value="${r.rate}" step="0.0001" min="0.0001" style="width:110px;" /></td>
           <td>
             <div class="row-actions">
@@ -102,16 +102,18 @@
     function getRowValues(i) {
       const row = document.querySelector(`tr[data-index="${i}"]`);
       return {
-        from: row.querySelector('.r-from').value.trim().toUpperCase(),
-        to: row.querySelector('.r-to').value.trim().toUpperCase(),
+        from: 'USD',
+        to: 'AUD',
+        fromDate: row.querySelector('.r-fromDate').value.trim(),
+        toDate: row.querySelector('.r-toDate').value.trim() || null,
         rate: parseFloat(row.querySelector('.r-rate').value)
       };
     }
 
     function saveRow(i) {
       const v = getRowValues(i);
-      if (!v.from || !v.to || isNaN(v.rate) || v.rate <= 0) {
-        showNotice('All fields are required and rate must be positive.', 'error');
+      if (!v.fromDate || isNaN(v.rate) || v.rate <= 0) {
+        showNotice('From Date and a positive rate are required.', 'error');
         return;
       }
       rates[i] = v;
@@ -124,16 +126,16 @@
     }
 
     function addRate() {
-      const from = document.getElementById('add-from').value.trim().toUpperCase();
-      const to = document.getElementById('add-to').value.trim().toUpperCase();
+      const fromDate = document.getElementById('add-fromDate').value.trim();
+      const toDate = document.getElementById('add-toDate').value.trim() || null;
       const rate = parseFloat(document.getElementById('add-rate').value);
-      if (!from || !to || isNaN(rate) || rate <= 0) {
-        showNotice('All fields are required and rate must be positive.', 'error');
+      if (!fromDate || isNaN(rate) || rate <= 0) {
+        showNotice('From Date and a positive rate are required.', 'error');
         return;
       }
-      rates.push({ from, to, rate });
-      document.getElementById('add-from').value = '';
-      document.getElementById('add-to').value = '';
+      rates.push({ from: 'USD', to: 'AUD', fromDate, toDate, rate });
+      document.getElementById('add-fromDate').value = '';
+      document.getElementById('add-toDate').value = '';
       document.getElementById('add-rate').value = '';
       persistRates();
     }
