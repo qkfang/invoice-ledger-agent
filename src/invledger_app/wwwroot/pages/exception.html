@@ -24,7 +24,8 @@
     </div>
 
     <div class="card">
-      <h2>Exceptions Across All Invoices</h2>
+      <h2>Exceptions</h2>
+      <div id="scenario-banner"></div>
       <div id="exc-area"><div class="empty">Loading...</div></div>
     </div>
 
@@ -35,8 +36,8 @@
     </div>
   </main>
 
-  <script src="../assets/app.js?v=20260517"></script>
-  <script src="../assets/workflow.js?v=20260517"></script>
+  <script src="../assets/app.js?v=20260521"></script>
+  <script src="../assets/workflow.js?v=20260521"></script>
   <script>
     renderHeader('Exception');
 
@@ -113,11 +114,14 @@ Please review and confirm the correct ledger mapping or reject the line item.`;
     (async () => {
       try {
         const { invoices, ledger, rules } = await loadWorkflowData();
+        const scenario = getScenario();
+        const source = scenario ? invoices.filter(i => i.invoiceId === scenario) : invoices;
         allExceptions = [];
-        for (const inv of invoices) {
+        for (const inv of source) {
           const { results } = processInvoice(inv, ledger, rules);
           allExceptions.push(...results.filter(r => r.status === 'exception'));
         }
+        renderScenarioBanner('scenario-banner', invoices);
         renderExceptions();
       } catch (err) {
         document.getElementById('exc-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;

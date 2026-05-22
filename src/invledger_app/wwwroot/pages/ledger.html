@@ -32,6 +32,7 @@
 
     <div class="card">
       <h2>Approved Ledger</h2>
+      <div id="scenario-banner"></div>
       <div id="ledger-area"><div class="empty">Loading...</div></div>
     </div>
 
@@ -51,8 +52,8 @@
     </div>
   </main>
 
-  <script src="../assets/app.js?v=20260517"></script>
-  <script src="../assets/workflow.js?v=20260517"></script>
+  <script src="../assets/app.js?v=20260521"></script>
+  <script src="../assets/workflow.js?v=20260521"></script>
   <script>
     renderHeader('Ledger');
 
@@ -170,6 +171,7 @@
         const data = await loadWorkflowData();
         ledger = data.ledger;
         invoices = data.invoices || [];
+        renderScenarioBanner('scenario-banner', invoices);
         renderLedger();
       } catch (err) {
         document.getElementById('ledger-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;

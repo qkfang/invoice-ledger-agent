@@ -10,6 +10,7 @@
     table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
     table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
     .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
+    tr.scenario-active-row td { background: #f0fdf4; }
   </style>
 </head>
 <body>
@@ -28,27 +29,47 @@
     </div>
   </main>
 
-  <script src="../assets/app.js?v=20260517"></script>
-  <script src="../assets/workflow.js?v=20260517"></script>
+  <script src="../assets/app.js?v=20260521"></script>
+  <script src="../assets/workflow.js?v=20260521"></script>
   <script>
     renderHeader('Ingestion');
 
     (async () => {
       try {
         const { invoices } = await loadWorkflowData();
-        const rows = invoices.map(inv => `
-          <tr>
+        const currentScenario = getScenario();
+        const rows = invoices.map(inv => {
+          const isActive = inv.invoiceId === currentScenario;
+          return `
+          <tr class="${isActive ? 'scenario-active-row' : ''}">
             <td><strong>${esc(inv.documentName)}</strong></td>
             <td>${esc(inv.vendorName)}</td>
             <td>${esc(inv.invoiceDate)}</td>
             <td>${fmtMoney(inv.totalAmount, inv.currency)}</td>
             <td>${statusBadge(inv.ingestionStatus)}</td>
-          </tr>`).join('');
+            <td>
+              <button class="btn-secondary btn-use-scenario" style="font-size:0.78rem;padding:4px 10px;" data-id="${esc(inv.invoiceId)}"${isActive ? ' disabled' : ''}>
+                ${isActive ? '✓ Selected' : 'Use'}
+              </button>
+            </td>
+          </tr>`;
+        }).join('');
         document.getElementById('inbox-area').innerHTML = `
           <table class="data">
-            <thead><tr><th>Document</th><th>Vendor</th><th>Invoice Date</th><th>Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>Document</th><th>Vendor</th><th>Invoice Date</th><th>Total</th><th>Status</th><th style="width:90px;">Scenario</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>`;
+        document.querySelectorAll('.btn-use-scenario').forEach(btn => {
+          btn.addEventListener('click', () => {
+            setScenario(btn.dataset.id);
+            document.querySelectorAll('.btn-use-scenario').forEach(b => {
+              const active = b.dataset.id === btn.dataset.id;
+              b.textContent = active ? '✓ Selected' : 'Use';
+              b.disabled = active;
+              b.closest('tr').classList.toggle('scenario-active-row', active);
+            });
+          });
+        });
       } catch (err) {
         document.getElementById('inbox-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
       }
