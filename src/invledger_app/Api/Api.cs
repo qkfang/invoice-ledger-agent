@@ -10,6 +10,7 @@ record JsonRequest(string Json);
 record ApproveRequest(string RunId, bool Approved);
 record SendEmailRequest(string To, string Subject, string Body);
 record CorrespondenceChatRequest(string PreviousResponseId, string Message);
+record ProcessEmailRequest(string EmailJson, string AttachmentJson);
 
 public static class Endpoints
 {
@@ -261,6 +262,44 @@ public static class Endpoints
         {
             fxRateService.UpdateRates(rates);
             return Results.Ok(fxRateService.GetRates());
+        });
+
+        app.MapPost("/ingestion/process-email", async (ProcessEmailRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.EmailJson))
+                return Results.BadRequest(new { error = "emailJson is required" });
+
+            var dt = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var folder = $"email-{dt}";
+            var savedFiles = new List<object>();
+
+            async Task<object> SaveJsonFile(string json, string fileName)
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                var blobPath = $"{folder}/{fileName}";
+                Uri blobUrl;
+                using (var ms = new MemoryStream(bytes))
+                    blobUrl = await blobStorage.UploadAsync(ms, blobPath);
+                string? fabricPath = null;
+                if (fabricLakehouse != null)
+                {
+                    using var ms = new MemoryStream(bytes);
+                    fabricPath = await fabricLakehouse.UploadAsync(ms, blobPath, bytes.Length);
+                }
+                return new { name = fileName, folder, blobUrl = blobUrl.ToString(), fabricPath };
+            }
+
+            savedFiles.Add(await SaveJsonFile(request.EmailJson, $"{folder}-body.json"));
+            if (!string.IsNullOrWhiteSpace(request.AttachmentJson))
+                savedFiles.Add(await SaveJsonFile(request.AttachmentJson, $"{folder}-attachment.json"));
+
+            var prompt = string.IsNullOrWhiteSpace(request.AttachmentJson)
+                ? $"Process this email:\n\n{request.EmailJson}"
+                : $"Process this email and its attachments:\n\n{request.EmailJson}\n\nAttachment data:\n{request.AttachmentJson}";
+
+            logger.LogInformation("Process email: saved {Count} file(s) to folder {Folder}", savedFiles.Count, Sanitize(folder));
+            var agentResponse = await ingestionAgent.RunAsync(prompt);
+            return Results.Ok(new { folder, agentResponse, savedFiles });
         });
 
     }

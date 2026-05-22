@@ -88,6 +88,13 @@
     .fabric-status { font-size: 0.75rem; margin-left: 8px; }
     .fabric-status.ok { color: #166534; }
     .fabric-status.err { color: #991b1b; }
+
+    .btn-process {
+      background: #0369a1; color: #fff; border: none; border-radius: 6px;
+      padding: 7px 16px; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin-top: 10px;
+    }
+    .btn-process:hover:not(:disabled) { background: #0284c7; }
+    .btn-process:disabled { background: #7dd3fc; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -110,6 +117,12 @@
     <div class="card" id="attachments-card" style="display:none;">
       <h2>📎 Attachments</h2>
       <div id="attachments-area"></div>
+    </div>
+
+    <!-- Process email result -->
+    <div class="card" id="process-result-card" style="display:none;">
+      <h2>📤 Processing Result</h2>
+      <div id="process-result-area"></div>
     </div>
 
     <div class="card">
@@ -189,6 +202,7 @@
 
     let allInvoices = [];
     let allEmails = [];
+    let currentEmail = null;
 
     async function loadEmails() {
       const inPages = location.pathname.includes('/pages/');
@@ -226,6 +240,7 @@
     }
 
     function showEmailDetail(email) {
+      currentEmail = email;
       const detail = document.getElementById('email-detail');
       detail.innerHTML = `
         <div class="email-subject-line">${esc(email.subject)}</div>
@@ -234,10 +249,70 @@
           <div class="email-meta-row"><span class="email-meta-key">To</span><span class="email-meta-val">${esc(email.to)}</span></div>
           <div class="email-meta-row"><span class="email-meta-key">Date</span><span class="email-meta-val">${esc(email.date)}</span></div>
         </div>
-        <div class="email-body">${esc(email.body)}</div>`;
+        <div class="email-body">${esc(email.body)}</div>
+        <button class="btn-process" id="btn-process-email">⚙ Process Selected Email</button>`;
+      document.getElementById('btn-process-email').addEventListener('click', processSelectedEmail);
       const firstInvoiceId = email.attachments?.[0]?.invoiceId;
       if (firstInvoiceId) setScenario(firstInvoiceId);
       renderAttachments(email.attachments);
+    }
+
+    async function processSelectedEmail() {
+      if (!currentEmail) return;
+      const btn = document.getElementById('btn-process-email');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Processing…';
+
+      const resultCard = document.getElementById('process-result-card');
+      const resultArea = document.getElementById('process-result-area');
+      resultCard.style.display = '';
+      resultArea.innerHTML = '<div class="empty">Running agent…</div>';
+
+      const emailJson = JSON.stringify({
+        id: currentEmail.id,
+        from: currentEmail.from,
+        fromName: currentEmail.fromName,
+        to: currentEmail.to,
+        subject: currentEmail.subject,
+        date: currentEmail.date,
+        body: currentEmail.body
+      }, null, 2);
+
+      const invoiceMap = {};
+      allInvoices.forEach(inv => { invoiceMap[inv.invoiceId] = inv; });
+      const attachmentData = (currentEmail.attachments || []).map(att => ({
+        name: att.name,
+        invoiceId: att.invoiceId,
+        invoice: invoiceMap[att.invoiceId] || null
+      }));
+      const attachmentJson = JSON.stringify(attachmentData, null, 2);
+
+      try {
+        const res = await fetch('/ingestion/process-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ emailJson, attachmentJson })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+        setEmailFolder({ folder: data.folder, savedFiles: data.savedFiles });
+
+        const filesJson = JSON.stringify(data.savedFiles, null, 2);
+        resultArea.innerHTML = `
+          <div style="margin-bottom:10px;font-size:0.88rem;color:#166534;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 12px;">
+            📁 Saved to folder <strong>${esc(data.folder)}</strong>
+          </div>
+          <h3 style="font-size:0.88rem;margin-bottom:4px;">Saved Files</h3>
+          <pre>${esc(filesJson)}</pre>
+          <h3 style="font-size:0.88rem;margin:10px 0 4px;">Agent Response</h3>
+          <pre>${esc(data.agentResponse)}</pre>`;
+      } catch (err) {
+        resultArea.innerHTML = `<div class="empty error" style="color:#991b1b;">Error: ${esc(err.message)}</div>`;
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '⚙ Process Selected Email';
     }
 
     function renderAttachments(attachments) {

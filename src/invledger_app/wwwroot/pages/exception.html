@@ -17,6 +17,7 @@
 </head>
 <body>
   <main>
+    <div id="email-folder-banner"></div>
     <h1>Exception Screen <span id="agent-info-host"></span></h1>
     <div class="subtitle">Invoice line items that could not be mapped to the ledger. The exception agent routes each to the responsible team.</div>
 
@@ -38,6 +39,7 @@
   <script>
     renderHeader('Exception');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-exception']);
+    renderEmailFolderBanner('email-folder-banner');
 
     let allExceptions = [];
 

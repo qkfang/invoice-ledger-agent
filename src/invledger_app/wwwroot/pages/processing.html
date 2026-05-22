@@ -21,6 +21,7 @@
 </head>
 <body>
   <main>
+    <div id="email-folder-banner"></div>
     <h1>Processing Screen <span id="agent-info-host"></span></h1>
     <div class="subtitle">The processing agent matches each invoice line item against the approved ledger using category, sub-item and dollar checks.</div>
 
@@ -50,6 +51,7 @@
   <script>
     renderHeader('Processing');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-processing']);
+    renderEmailFolderBanner('email-folder-banner');
 
     let invoices = [], ledger = null, rules = [];
 

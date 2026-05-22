@@ -213,6 +213,32 @@ function getScenario() {
   return localStorage.getItem('inv_scenario') || '';
 }
 
+// Email folder: persist processed email folder reference across tabs.
+function setEmailFolder(data) {
+  localStorage.setItem('inv_email_folder', data ? JSON.stringify(data) : '');
+}
+
+function getEmailFolder() {
+  try {
+    const s = localStorage.getItem('inv_email_folder');
+    return s ? JSON.parse(s) : null;
+  } catch { return null; }
+}
+
+function renderEmailFolderBanner(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const data = getEmailFolder();
+  if (!data || !data.folder) { el.innerHTML = ''; return; }
+  const files = (data.savedFiles || []).map(f => {
+    const fabricPart = f.fabricPath
+      ? ` <span style="font-size:0.75rem;opacity:0.75;">· Fabric: ${esc(f.fabricPath)}</span>`
+      : '';
+    return `<span class="ef-file">📄 <a href="${esc(f.blobUrl)}" target="_blank" rel="noopener">${esc(f.name)}</a>${fabricPart}</span>`;
+  }).join('');
+  el.innerHTML = `<div class="email-folder-banner">📁 Email folder: <strong>${esc(data.folder)}</strong>${files ? ' &nbsp;|' : ''}${files}</div>`;
+}
+
 // Markdown rendering powered by marked + DOMPurify (loaded via CDN in pages that need it).
 function renderMarkdown(md) {
   if (md == null || md === '') return '<div class="empty">No content.</div>';
