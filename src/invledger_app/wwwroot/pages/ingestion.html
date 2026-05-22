@@ -6,25 +6,31 @@
   <title>Ingestion Agent</title>
   <link rel="stylesheet" href="../assets/styles.css" />
   <style>
-    table.data { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-    table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
-    .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .field-grid { display: grid; grid-template-columns: 160px 1fr; gap: 6px 14px; font-size: 0.9rem; }
+    .field-grid .k { color: var(--muted); font-weight: 600; }
   </style>
 </head>
 <body>
   <main>
-    <h1>Ingestion Screen</h1>
+    <h1>Ingestion Screen <span id="agent-info-host"></span></h1>
     <div class="subtitle">The ingestion agent receives incoming vendor invoice documents into the inbox.</div>
-
-    <div class="card agent-card">
-      <h2>Ingestion Agent</h2>
-      <div class="subtitle" style="margin:0;">Confirms a document is a vendor invoice, extracts the envelope (vendor, date, total) and marks it accepted or rejected for downstream extraction.</div>
-    </div>
 
     <div class="card">
       <h2>Inbox</h2>
       <div id="inbox-area"><div class="empty">Loading...</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Test Ingestion Agent</h2>
+      <div class="subtitle" style="margin:0 0 12px;">Select an invoice and run the ingestion agent to confirm it produces a valid result.</div>
+      <div class="row">
+        <label for="inv-select">Invoice</label>
+        <select id="inv-select"></select>
+      </div>
+      <button id="btn-run">Run Ingestion Agent</button>
+      <div id="agent-result" style="margin-top:14px;"></div>
     </div>
   </main>
 
@@ -32,10 +38,70 @@
   <script src="../assets/workflow.js?v=20260517"></script>
   <script>
     renderHeader('Ingestion');
+    mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-ingestion']);
+
+    let invoices = [];
+
+    function setRunLoading(loading) {
+      const b = document.getElementById('btn-run');
+      b.disabled = loading;
+      b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Run Ingestion Agent';
+    }
+
+    function renderInvoiceOptions() {
+      document.getElementById('inv-select').innerHTML = invoices.map(i =>
+        `<option value="${esc(i.invoiceId)}">${esc(i.invoiceId)} — ${esc(i.vendorName)}</option>`
+      ).join('');
+    }
+
+    document.getElementById('btn-run').addEventListener('click', async () => {
+      const id = document.getElementById('inv-select').value;
+      const inv = invoices.find(i => i.invoiceId === id);
+      if (!inv) return;
+      setRunLoading(true);
+      document.getElementById('agent-result').innerHTML = '';
+      try {
+        const res = await fetch('/ingestion/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json: JSON.stringify(inv, null, 2) })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        renderAgentResult(data.response);
+      } catch (err) {
+        document.getElementById('agent-result').innerHTML =
+          `<div class="empty error">Error: ${esc(err.message)}</div>`;
+      }
+      setRunLoading(false);
+    });
+
+    function renderAgentResult(response) {
+      const m = response && response.match(/\{[\s\S]*\}/);
+      const parsed = m ? (() => { try { return JSON.parse(m[0]); } catch { return null; } })() : null;
+      if (parsed) {
+        document.getElementById('agent-result').innerHTML = `
+          <div class="field-grid">
+            <div class="k">Invoice ID</div><div>${esc(parsed.invoiceId)}</div>
+            <div class="k">Vendor</div><div>${esc(parsed.vendorName)}</div>
+            <div class="k">Invoice Date</div><div>${esc(parsed.invoiceDate)}</div>
+            <div class="k">Currency</div><div>${esc(parsed.currency)}</div>
+            <div class="k">Total Amount</div><div>${esc(parsed.totalAmount)}</div>
+            <div class="k">Status</div><div>${statusBadge(parsed.ingestionStatus)}</div>
+            <div class="k">Reason</div><div>${esc(parsed.reason)}</div>
+          </div>
+          <h3 style="margin-top:14px;font-size:0.9rem;">Raw Response</h3>
+          <pre>${esc(response)}</pre>`;
+      } else {
+        document.getElementById('agent-result').innerHTML = `<pre>${esc(response)}</pre>`;
+      }
+    }
 
     (async () => {
       try {
-        const { invoices } = await loadWorkflowData();
+        const { invoices: data } = await loadWorkflowData();
+        invoices = data;
+        renderInvoiceOptions();
         const rows = invoices.map(inv => `
           <tr>
             <td><strong>${esc(inv.documentName)}</strong></td>

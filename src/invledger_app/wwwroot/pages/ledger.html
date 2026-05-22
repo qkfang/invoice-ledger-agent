@@ -18,17 +18,14 @@
     .col-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 6px; }
     .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
     .qa-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 0.88rem; margin-top: 8px; white-space: pre-wrap; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <main>
-    <h1>Ledger Screen</h1>
+    <h1>Ledger Screen <span id="agent-info-host"></span></h1>
     <div class="subtitle">Approved ledger categories, sub-items, and posted entries. The ledger agent answers questions about this data.</div>
-
-    <div class="card agent-card">
-      <h2>Ledger Agent</h2>
-      <div class="subtitle" style="margin:0;">Answers questions about the approved ledger: which categories exist, what sub-items they include, budgets vs. YTD balances, and posted invoice history.</div>
-    </div>
 
     <div class="card">
       <h2>Approved Ledger</h2>
@@ -55,8 +52,15 @@
   <script src="../assets/workflow.js?v=20260517"></script>
   <script>
     renderHeader('Ledger');
+    mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-ledger']);
 
     let ledger = null, invoices = [];
+
+    function setAskLoading(loading) {
+      const b = document.getElementById('btn-ask');
+      b.disabled = loading;
+      b.innerHTML = loading ? '<span class="spinner"></span>Asking...' : 'Ask';
+    }
 
     function renderLedger() {
       const invByCategory = {};
@@ -129,40 +133,35 @@
         </table>`;
     }
 
-    // Tiny canned Q&A for the demo. Looks up categories or items
-    // mentioned in the question and reports their numbers.
-    function answer(q) {
-      if (!q) return 'Please ask a question.';
-      const ql = q.toLowerCase();
-      const cat = ledger.categories.find(c => ql.includes(c.categoryName.toLowerCase()));
-      if (cat) {
-        if (ql.includes('budget')) return `${cat.categoryName} approved budget is ${fmtMoney(cat.approvedBudget, ledger.currency)}.`;
-        if (ql.includes('ytd') || ql.includes('balance') || ql.includes('spent')) {
-          const remaining = cat.approvedBudget - cat.ytdBalance;
-          return `${cat.categoryName}: YTD ${fmtMoney(cat.ytdBalance, ledger.currency)} of ${fmtMoney(cat.approvedBudget, ledger.currency)} (remaining ${fmtMoney(remaining, ledger.currency)}).`;
-        }
-        if (ql.includes('item') || ql.includes('sub')) {
-          return `${cat.categoryName} sub-items: ${cat.items.map(i => i.itemName).join(', ')}.`;
-        }
-        return `${cat.categoryName} [${cat.ledgerCode}] — Budget ${fmtMoney(cat.approvedBudget, ledger.currency)}, YTD ${fmtMoney(cat.ytdBalance, ledger.currency)}, ${cat.items.length} approved sub-item(s).`;
-      }
-      if (ql.includes('categories') || ql.includes('all categories')) {
-        return 'Approved categories: ' + ledger.categories.map(c => c.categoryName).join(', ') + '.';
-      }
-      if (ql.includes('posted') || ql.includes('history')) {
-        const entries = ledger.postedEntries || [];
-        if (!entries.length) return 'No posted entries yet.';
-        return entries.map(p => `${p.postedDate} · ${p.category} / ${p.item} · ${fmtMoney(p.amount, ledger.currency)}`).join('\n');
-      }
-      return 'I could not answer that from the approved ledger. Try asking about a specific category, its budget, YTD balance, or sub-items.';
-    }
-
-    document.getElementById('btn-ask').addEventListener('click', () => {
+    document.getElementById('btn-ask').addEventListener('click', async () => {
       const q = document.getElementById('q-input').value.trim();
-      const a = answer(q);
+      if (!q || !ledger) return;
+      setAskLoading(true);
       document.getElementById('qa-area').innerHTML = `
         <div class="qa-box"><strong>Q:</strong> ${esc(q)}</div>
-        <div class="qa-box" style="background:#eef2ff;border-color:#c7d2fe;"><strong>A:</strong> ${esc(a)}</div>`;
+        <div class="qa-box" style="background:#eef2ff;border-color:#c7d2fe;">Running ledger agent...</div>`;
+      try {
+        const message = `${q}\n\nLedger snapshot:\n${JSON.stringify(ledger, null, 2)}`;
+        const res = await fetch('/ledger/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json: message })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        document.getElementById('qa-area').innerHTML = `
+          <div class="qa-box"><strong>Q:</strong> ${esc(q)}</div>
+          <div class="qa-box" style="background:#eef2ff;border-color:#c7d2fe;"><strong>A:</strong> ${esc(data.response)}</div>`;
+      } catch (err) {
+        document.getElementById('qa-area').innerHTML = `
+          <div class="qa-box"><strong>Q:</strong> ${esc(q)}</div>
+          <div class="qa-box" style="background:#fee2e2;border-color:#fca5a5;">Error: ${esc(err.message)}</div>`;
+      }
+      setAskLoading(false);
+    });
+
+    document.getElementById('q-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('btn-ask').click();
     });
 
     (async () => {

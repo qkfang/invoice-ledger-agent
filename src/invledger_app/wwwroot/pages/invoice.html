@@ -14,6 +14,8 @@
     .invoice-list button.active { background: #eef2ff; border-color: var(--primary); color: var(--text); }
     .field-grid { display: grid; grid-template-columns: 160px 1fr; gap: 6px 14px; font-size: 0.9rem; }
     .field-grid .k { color: var(--muted); font-weight: 600; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .category-block { margin-top: 16px; }
     .category-block h3 { font-size: 0.95rem; margin-bottom: 6px; }
     .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
@@ -21,23 +23,25 @@
 </head>
 <body>
   <main>
-    <h1>Invoice Screen</h1>
+    <h1>Invoice Screen <span id="agent-info-host"></span></h1>
     <div class="subtitle">The invoice agent extracts invoice details and line items from ingested documents.</div>
-
-    <div class="card agent-card">
-      <h2>Invoice Agent</h2>
-      <div class="subtitle" style="margin:0;">Reads each accepted document and produces structured invoice JSON: header fields, categories, and line items with quantities and totals.</div>
-    </div>
 
     <div class="grid-2">
       <div class="card">
         <h2>Ingested Invoices</h2>
         <div id="list-area" class="invoice-list"><div class="empty">Loading...</div></div>
+        <button id="btn-run" style="margin-top:12px;" disabled>Run Invoice Agent</button>
+        <div id="run-status" style="margin-top:6px;font-size:0.82rem;color:var(--muted);"></div>
       </div>
       <div class="card">
         <h2>Extracted Invoice</h2>
         <div id="detail-area"><div class="empty">Select an invoice on the left.</div></div>
       </div>
+    </div>
+
+    <div class="card" id="agent-result-card" style="display:none;">
+      <h2>Agent Result</h2>
+      <div id="agent-result-area"></div>
     </div>
   </main>
 
@@ -45,10 +49,17 @@
   <script src="../assets/workflow.js?v=20260517"></script>
   <script>
     renderHeader('Invoice');
+    mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-invoice']);
 
     let invoices = [];
     let fxRates = [];
     let selectedId = null;
+
+    function setRunLoading(loading) {
+      const b = document.getElementById('btn-run');
+      b.disabled = loading || !selectedId;
+      b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Run Invoice Agent';
+    }
 
     function renderList() {
       document.getElementById('list-area').innerHTML = invoices.map(inv => `
@@ -57,7 +68,11 @@
           <div style="color:var(--muted);font-size:0.82rem;">${esc(inv.vendorName)} · ${fmtMoney(inv.totalAmount, inv.currency)}</div>
         </button>`).join('');
       document.querySelectorAll('#list-area button').forEach(b => {
-        b.addEventListener('click', () => { selectedId = b.dataset.id; renderList(); renderDetail(); });
+        b.addEventListener('click', () => {
+          selectedId = b.dataset.id;
+          document.getElementById('btn-run').disabled = false;
+          renderList(); renderDetail();
+        });
       });
     }
 
@@ -108,10 +123,37 @@
         fxRates = data.fxRates || [];
         selectedId = invoices[0]?.invoiceId || null;
         renderList(); renderDetail();
+        document.getElementById('btn-run').disabled = !selectedId;
       } catch (err) {
         document.getElementById('list-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
       }
     })();
+
+    document.getElementById('btn-run').addEventListener('click', async () => {
+      const inv = invoices.find(i => i.invoiceId === selectedId);
+      if (!inv) return;
+      setRunLoading(true);
+      document.getElementById('run-status').textContent = 'Calling invoice agent...';
+      const card = document.getElementById('agent-result-card');
+      card.style.display = 'block';
+      document.getElementById('agent-result-area').innerHTML = '<div class="empty">Running...</div>';
+      try {
+        const res = await fetch('/invoice/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json: JSON.stringify(inv, null, 2) })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        document.getElementById('run-status').textContent = 'Agent completed.';
+        document.getElementById('agent-result-area').innerHTML = `<pre>${esc(data.response)}</pre>`;
+      } catch (err) {
+        document.getElementById('run-status').textContent = `Error: ${err.message}`;
+        document.getElementById('agent-result-area').innerHTML =
+          `<div class="empty error">Error: ${esc(err.message)}</div>`;
+      }
+      setRunLoading(false);
+    });
   </script>
 </body>
 </html>

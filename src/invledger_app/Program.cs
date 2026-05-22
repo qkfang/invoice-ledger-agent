@@ -125,6 +125,11 @@ var notificationAgent = new InvLdgAgNotification(aiProjectClient, deploymentName
 var correspondenceAgent = new InvLdgAgCorrespondence(aiProjectClient, deploymentName, [appMcpToolWithApproval], loggerFactory.CreateLogger<InvLdgAgCorrespondence>());
 var extractDiAgent = new InvLdgAgExtractDI(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgExtractDI>());
 var extractCuAgent = new InvLdgAgExtractCU(aiProjectClient, deploymentName, loggerFactory.CreateLogger<InvLdgAgExtractCU>());
+var ingestionAgent = new InvLdgAgIngestion(aiProjectClient, deploymentName, null, loggerFactory.CreateLogger<InvLdgAgIngestion>());
+var invoiceAgent = new InvLdgAgInvoice(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgInvoice>());
+var processingAgent = new InvLdgAgProcessing(aiProjectClient, deploymentName, null, loggerFactory.CreateLogger<InvLdgAgProcessing>());
+var exceptionAgent = new InvLdgAgException(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgException>());
+var ledgerAgent = new InvLdgAgLedger(aiProjectClient, deploymentName, null, loggerFactory.CreateLogger<InvLdgAgLedger>());
 var docService = app.Services.GetRequiredService<DocIntelligenceService>();
 var cuService = app.Services.GetRequiredService<ContentUnderstandingService>();
 await cuService.InitializeAsync();
@@ -133,6 +138,8 @@ var notificationService = app.Services.GetRequiredService<NotificationService>()
 var approvalStore = app.Services.GetRequiredService<PendingApprovalStore>();
 
 var fxRateService = app.Services.GetRequiredService<FxRateService>();
-app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent, docService, cuService, blobStorage, notificationService, approvalStore, fxRateService, logger);
+app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent,
+    ingestionAgent, invoiceAgent, processingAgent, exceptionAgent, ledgerAgent,
+    docService, cuService, blobStorage, notificationService, approvalStore, fxRateService, logger);
 
 await app.RunAsync();

@@ -15,18 +15,14 @@
     .summary-pill .l { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
     .notes-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 0.85rem; white-space: pre-wrap; margin-top: 8px; font-family: ui-monospace, Menlo, monospace; }
     .rule-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: #eef2ff; color: var(--primary); }
-    .agent-card { background: #eef2ff; border: 1px solid #c7d2fe; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <main>
-    <h1>Processing Screen</h1>
+    <h1>Processing Screen <span id="agent-info-host"></span></h1>
     <div class="subtitle">The processing agent matches each invoice line item against the approved ledger using category, sub-item and dollar checks.</div>
-
-    <div class="card agent-card">
-      <h2>Processing Agent</h2>
-      <div class="subtitle" style="margin:0;">Applies the matching rules below. Items matching all checks are auto-approved. Items outside tolerance or above the high-value threshold are flagged for human review. Items with no ledger category or sub-item are sent to the exception queue.</div>
-    </div>
 
     <div class="card">
       <h2>Matching Rules</h2>
@@ -52,8 +48,15 @@
   <script src="../assets/workflow.js?v=20260517"></script>
   <script>
     renderHeader('Processing');
+    mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-processing']);
 
     let invoices = [], ledger = null, rules = [];
+
+    function setRunLoading(loading) {
+      const b = document.getElementById('btn-run');
+      b.disabled = loading;
+      b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Run Processing Agent';
+    }
 
     function renderRules() {
       const rows = rules.map(r => `
@@ -107,12 +110,33 @@
         <div class="notes-box">${esc(result.notes)}</div>`;
     }
 
-    document.getElementById('btn-run').addEventListener('click', () => {
+    document.getElementById('btn-run').addEventListener('click', async () => {
       const id = document.getElementById('invoice-select').value;
       const inv = invoices.find(i => i.invoiceId === id);
       if (!inv) return;
-      const result = processInvoice(inv, ledger, rules);
-      renderResult(inv, result);
+      setRunLoading(true);
+      document.getElementById('result-area').innerHTML = '<div class="empty">Running agent...</div>';
+      try {
+        const message = `Process the following invoice against the provided ledger and rules.\n\nInvoice:\n${JSON.stringify(inv, null, 2)}\n\nApproved Ledger:\n${JSON.stringify(ledger, null, 2)}\n\nMatching Rules:\n${JSON.stringify(rules, null, 2)}`;
+        const res = await fetch('/processing/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json: message })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        const m = data.response && data.response.match(/\{[\s\S]*\}/);
+        const result = m ? (() => { try { return JSON.parse(m[0]); } catch { return null; } })() : null;
+        if (result) {
+          renderResult(inv, result);
+        } else {
+          document.getElementById('result-area').innerHTML = `<pre>${esc(data.response)}</pre>`;
+        }
+      } catch (err) {
+        document.getElementById('result-area').innerHTML =
+          `<div class="empty error">Error: ${esc(err.message)}</div>`;
+      }
+      setRunLoading(false);
     });
 
     (async () => {

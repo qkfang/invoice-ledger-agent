@@ -17,13 +17,20 @@ public static class Endpoints
         InvLdgAgNotification notificationAgent,
         InvLdgAgCorrespondence correspondenceAgent,
         InvLdgAgExtractDI extractDiAgent, InvLdgAgExtractCU extractCuAgent,
+        InvLdgAgIngestion ingestionAgent, InvLdgAgInvoice invoiceAgent,
+        InvLdgAgProcessing processingAgent, InvLdgAgException exceptionAgent,
+        InvLdgAgLedger ledgerAgent,
         DocIntelligenceService docService, ContentUnderstandingService cuService,
         BlobStorageService blobStorage, NotificationService notificationService,
         PendingApprovalStore approvalStore, FxRateService fxRateService, ILogger logger)
     {
         app.MapGet("/agents/instructions", () =>
         {
-            var agents = new BaseAgent[] { extractDiAgent, extractCuAgent, notificationAgent, correspondenceAgent };
+            var agents = new BaseAgent[]
+            {
+                ingestionAgent, invoiceAgent, processingAgent, exceptionAgent, ledgerAgent,
+                extractDiAgent, extractCuAgent, notificationAgent, correspondenceAgent
+            };
             return Results.Ok(agents.ToDictionary(a => a.AgentId, a => a.Instructions));
         });
 
@@ -173,6 +180,58 @@ public static class Endpoints
 
             var step = await correspondenceAgent.ContinueRunAsync(state.PreviousResponseId, state.ApprovalItemId, request.Approved);
             return BuildCorrespondenceResponse(step, approvalStore, null);
+        });
+
+        app.MapPost("/ingestion/run", async (JsonRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Json))
+                return Results.BadRequest(new { error = "json is required" });
+
+            logger.LogInformation("Ingestion run request ({Length} chars)", request.Json.Length);
+            var response = await ingestionAgent.RunAsync(
+                $"Validate and extract the envelope from this vendor invoice document:\n\n{request.Json}");
+            return Results.Ok(new { response });
+        });
+
+        app.MapPost("/invoice/run", async (JsonRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Json))
+                return Results.BadRequest(new { error = "json is required" });
+
+            logger.LogInformation("Invoice run request ({Length} chars)", request.Json.Length);
+            var response = await invoiceAgent.RunAsync(
+                $"Extract structured invoice details from this vendor invoice document:\n\n{request.Json}");
+            return Results.Ok(new { response });
+        });
+
+        app.MapPost("/processing/run", async (JsonRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Json))
+                return Results.BadRequest(new { error = "json is required" });
+
+            logger.LogInformation("Processing run request ({Length} chars)", request.Json.Length);
+            var response = await processingAgent.RunAsync(request.Json);
+            return Results.Ok(new { response });
+        });
+
+        app.MapPost("/exception/draft", async (JsonRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Json))
+                return Results.BadRequest(new { error = "json is required" });
+
+            logger.LogInformation("Exception draft request ({Length} chars)", request.Json.Length);
+            var response = await exceptionAgent.RunAsync(request.Json);
+            return Results.Ok(new { response });
+        });
+
+        app.MapPost("/ledger/ask", async (JsonRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Json))
+                return Results.BadRequest(new { error = "json is required" });
+
+            logger.LogInformation("Ledger ask request ({Length} chars)", request.Json.Length);
+            var response = await ledgerAgent.RunAsync(request.Json);
+            return Results.Ok(new { response });
         });
 
         app.MapGet("/fx-rates", () => Results.Ok(fxRateService.GetRates()));
