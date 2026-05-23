@@ -34,10 +34,6 @@
         <select id="run-select"><option value="">Loading runs…</option></select>
       </div>
       <div id="run-summary" style="margin-top:8px;font-size:0.85rem;color:var(--muted);"></div>
-      <div class="row" style="margin-top:8px;">
-        <label for="invoice-select">Invoice</label>
-        <select id="invoice-select"><option value="">Select a run first</option></select>
-      </div>
       <button id="btn-run" disabled>Run Processing Agent</button>
     </div>
 
@@ -54,8 +50,8 @@
     </div>
   </main>
 
-  <script src="../assets/app.js?v=20260521"></script>
-  <script src="../assets/workflow.js?v=20260521"></script>
+  <script src="../assets/app.js?v=20260523"></script>
+  <script src="../assets/workflow.js?v=20260523"></script>
   <script>
     renderHeader('Processing');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-processing']);
@@ -69,20 +65,7 @@
       b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Run Processing Agent';
     }
 
-    function renderInvoiceOptions() {
-      const sel = document.getElementById('invoice-select');
-      if (!invoices.length) {
-        sel.innerHTML = '<option value="">No invoices in this run</option>';
-        document.getElementById('btn-run').disabled = true;
-        return;
-      }
-      sel.innerHTML = invoices.map(i =>
-        `<option value="${esc(i.invoiceId)}">${esc(i.invoiceId)} — ${esc(i.vendorName)} (${fmtMoney(i.totalAmount, i.currency)})</option>`
-      ).join('');
-      document.getElementById('btn-run').disabled = false;
-    }
-
-    function renderResult(result) {
+    function renderResultHtml(result) {
       const header = `
         <div class="summary-row">
           <div class="summary-pill"><div class="n">${esc(result.businessName)}</div><div class="l">Business</div></div>
@@ -104,7 +87,8 @@
           <td>${r.lineTotal != null ? fmtMoney(r.lineTotal, result.originalInvoiceCurrency) : '—'}</td>
         </tr>`).join('');
 
-      document.getElementById('result-area').innerHTML = `
+      return `
+        <h3 style="margin:4px 0 8px;font-size:0.95rem;">${esc(result.invoiceId || '')}</h3>
         ${header}
         <table class="data">
           <thead><tr>
@@ -122,9 +106,7 @@
     }
 
     document.getElementById('btn-run').addEventListener('click', async () => {
-      const id = document.getElementById('invoice-select').value;
-      const inv = invoices.find(i => i.invoiceId === id);
-      if (!inv) return;
+      if (!invoices.length) return;
       setRunLoading(true);
       document.getElementById('result-area').innerHTML = '<div class="empty">Running agent...</div>';
       const ioCard = document.getElementById('io-card');
@@ -133,7 +115,7 @@
         const res = await fetch('/processing/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json: JSON.stringify(inv, null, 2) })
+          body: JSON.stringify({ json: JSON.stringify({ invoices }, null, 2) })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -146,7 +128,11 @@
 
         const result = parseAgentJson(data.response);
         if (result) {
-          renderResult(result);
+          const list = Array.isArray(result.invoices) ? result.invoices
+                     : Array.isArray(result) ? result
+                     : [result];
+          document.getElementById('result-area').innerHTML =
+            list.map(renderResultHtml).join('<hr style="margin:18px 0;border:none;border-top:1px solid var(--border);" />');
         } else {
           document.getElementById('result-area').innerHTML = `<pre>${esc(data.response)}</pre>`;
         }
@@ -168,22 +154,20 @@
         document.getElementById('io-card').style.display = 'none';
         if (!runName) {
           summary.textContent = '';
-          document.getElementById('invoice-select').innerHTML = '<option value="">Select a run first</option>';
           document.getElementById('btn-run').disabled = true;
           return;
         }
-        summary.textContent = 'Loading invoice…';
+        summary.textContent = 'Loading invoices…';
         try {
           const payload = await loadRunInvoice(runName);
           if (!payload) {
             summary.innerHTML = `<span class="error">No extracted invoice for <strong>${esc(runName)}</strong>. Open the Invoice tab and run the invoice agent for this run first.</span>`;
-            document.getElementById('invoice-select').innerHTML = '<option value="">No invoice available</option>';
             document.getElementById('btn-run').disabled = true;
             return;
           }
           invoices = extractInvoiceArray(payload);
           summary.textContent = `Loaded ${invoices.length} invoice(s) from ${runName}.`;
-          renderInvoiceOptions();
+          document.getElementById('btn-run').disabled = invoices.length === 0;
         } catch (err) {
           summary.innerHTML = `<span class="error">Error: ${esc(err.message)}</span>`;
           document.getElementById('btn-run').disabled = true;

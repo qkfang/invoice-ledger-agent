@@ -12,7 +12,8 @@ public class InvLdgAgProcessing : BaseAgent
     }
 
     private static string GetInstructions() => """
-        You are a processing agent. You receive an invoice (with categories and line items).
+        You are a processing agent. You receive one or more invoices (each with categories and line items).
+        The input may be a single invoice object, an array of invoices, or an object containing an "invoices" array.
 
         For each invoice:
           1. Call the fx_convert MCP tool to convert the invoice totalAmount from the original currency to AUD,
@@ -42,6 +43,7 @@ public class InvLdgAgProcessing : BaseAgent
         }
 
         Flatten all line items from all categories into the single lineItems array, preserving the categoryName in lineItemCategory.
-        Return exactly one JSON object. No text outside the JSON.
+        Return a single JSON object of the form { "invoices": [ <processed invoice>, ... ] } containing every input invoice processed.
+        No text outside the JSON.
         """;
 }

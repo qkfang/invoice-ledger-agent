@@ -9,9 +9,10 @@ public class LocalRunStorageService
 
     public string RootPath => _rootPath;
 
-    public LocalRunStorageService(ILogger<LocalRunStorageService> logger)
+    public LocalRunStorageService(ILogger<LocalRunStorageService> logger, IWebHostEnvironment env)
     {
-        _rootPath = Path.Combine(Path.GetTempPath(), "invledger-temp");
+        var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
+        _rootPath = Path.Combine(webRoot, "temp");
         Directory.CreateDirectory(_rootPath);
         _logger = logger;
         _logger.LogInformation("Local run storage root: {Root}", _rootPath);

@@ -124,8 +124,8 @@
     </div>
   </main>
 
-  <script src="../assets/app.js?v=20260521"></script>
-  <script src="../assets/workflow.js?v=20260521"></script>
+  <script src="../assets/app.js?v=20260523"></script>
+  <script src="../assets/workflow.js?v=20260523"></script>
   <script>
     renderHeader('Ingestion');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-ingestion']);
@@ -267,25 +267,11 @@
         const area = document.getElementById('pdf-detail-area');
         const pdf = pdfs[idx];
         if (!pdf) { area.innerHTML = ''; return; }
-        const inv = findInvoiceForPdf(pdf.name);
-        const invHtml = inv ? `
-          <div class="field-grid">
-            <div class="k">File</div><div>${esc(pdf.name)}</div>
-            <div class="k">Invoice ID</div><div>${esc(inv.invoiceId)}</div>
-            <div class="k">Vendor</div><div>${esc(inv.vendorName)}</div>
-            <div class="k">Invoice Date</div><div>${esc(inv.invoiceDate)}</div>
-            <div class="k">Currency</div><div>${esc(inv.currency)}</div>
-            <div class="k">Total Amount</div><div>${esc(String(inv.totalAmount))}</div>
-          </div>` : `<div class="empty">No extracted data matched for this PDF.</div>`;
-
+        const pdfSrc = `${pdf.url}#toolbar=1&navpanes=0&pagemode=none`;
         area.innerHTML = `
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;border:1px solid var(--border);border-radius:8px;padding:14px;background:#f8fafc;">
-            <div style="min-height:520px;background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
-              <iframe src="${esc(pdf.url)}" style="width:100%;height:560px;border:none;" title="${esc(pdf.name)}"></iframe>
-            </div>
-            <div>
-              <h4 style="margin:0 0 10px;font-size:0.95rem;">📄 Extracted Invoice</h4>
-              ${invHtml}
+          <div style="border:1px solid var(--border);border-radius:8px;padding:14px;background:#f8fafc;">
+            <div class="doc-preview" style="background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+              <iframe src="${esc(pdfSrc)}" title="${esc(pdf.name)}" style="width:100%;height:620px;border:none;"></iframe>
             </div>
           </div>`;
       }
