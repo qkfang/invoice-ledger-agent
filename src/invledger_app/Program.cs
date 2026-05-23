@@ -126,7 +126,7 @@ var notificationAgent = new InvLdgAgNotification(aiProjectClient, deploymentName
 var correspondenceAgent = new InvLdgAgCorrespondence(aiProjectClient, deploymentName, [appMcpToolWithApproval], loggerFactory.CreateLogger<InvLdgAgCorrespondence>());
 var extractDiAgent = new InvLdgAgExtractDI(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgExtractDI>());
 var extractCuAgent = new InvLdgAgExtractCU(aiProjectClient, deploymentName, loggerFactory.CreateLogger<InvLdgAgExtractCU>());
-var ingestionAgent = new InvLdgAgIngestion(aiProjectClient, deploymentName, null, loggerFactory.CreateLogger<InvLdgAgIngestion>());
+var ingestionAgent = new InvLdgAgIngestion(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgIngestion>());
 var invoiceAgent = new InvLdgAgInvoice(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgInvoice>());
 var processingAgent = new InvLdgAgProcessing(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgProcessing>());
 var exceptionAgent = new InvLdgAgException(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgException>());
@@ -151,6 +151,7 @@ if (!string.IsNullOrWhiteSpace(fabricWorkspaceId) && !string.IsNullOrWhiteSpace(
 var fxRateService = app.Services.GetRequiredService<FxRateService>();
 app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent,
     ingestionAgent, invoiceAgent, processingAgent, exceptionAgent, ledgerAgent,
-    docService, cuService, blobStorage, notificationService, approvalStore, fxRateService, fabricLakehouse, logger);
+    docService, cuService, blobStorage, notificationService, approvalStore, fxRateService, fabricLakehouse,
+    app.Environment.WebRootPath, logger);
 
 await app.RunAsync();

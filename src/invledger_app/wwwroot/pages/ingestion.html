@@ -79,22 +79,21 @@
     table.data th { background: var(--input-bg); color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
     table.data tr:last-child td { border-bottom: none; }
 
-    .btn-fabric {
-      background: #7c3aed; color: #fff; border: none; border-radius: 6px;
-      padding: 5px 13px; font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap;
-    }
-    .btn-fabric:hover:not(:disabled) { background: #6d28d9; }
-    .btn-fabric:disabled { background: #c4b5fd; cursor: not-allowed; }
-    .fabric-status { font-size: 0.75rem; margin-left: 8px; }
-    .fabric-status.ok { color: #166534; }
-    .fabric-status.err { color: #991b1b; }
-
     .btn-process {
       background: #0369a1; color: #fff; border: none; border-radius: 6px;
       padding: 7px 16px; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin-top: 10px;
     }
     .btn-process:hover:not(:disabled) { background: #0284c7; }
     .btn-process:disabled { background: #7dd3fc; cursor: not-allowed; }
+
+    /* Invoice result display */
+    .invoice-card {
+      border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
+      margin-bottom: 12px; background: #f8fafc;
+    }
+    .invoice-card h4 { margin: 0 0 10px; font-size: 0.92rem; color: var(--text); }
+    .invoice-items { margin-top: 8px; font-size: 0.82rem; color: #555; }
+    .invoice-items li { margin-bottom: 3px; }
   </style>
 </head>
 <body>
@@ -102,7 +101,7 @@
     <h1>Ingestion Screen <span id="agent-info-host"></span></h1>
     <div class="subtitle">The ingestion agent receives incoming vendor invoice documents into the inbox.</div>
 
-    <!-- Email Inbox -->
+    <!-- Email Inbox (populated from scenarios) -->
     <div class="email-layout" id="email-layout">
       <div class="email-list">
         <div class="email-list-header">📧 Inbox</div>
@@ -119,21 +118,10 @@
       <div id="attachments-area"></div>
     </div>
 
-    <!-- Process email result -->
+    <!-- Process result -->
     <div class="card" id="process-result-card" style="display:none;">
       <h2>📤 Processing Result</h2>
       <div id="process-result-area"></div>
-    </div>
-
-    <div class="card">
-      <h2>Test Ingestion Agent</h2>
-      <div class="subtitle" style="margin:0 0 12px;">Select an invoice and run the ingestion agent to confirm it produces a valid result.</div>
-      <div class="row">
-        <label for="inv-select">Invoice</label>
-        <select id="inv-select"></select>
-      </div>
-      <button id="btn-run">Run Ingestion Agent</button>
-      <div id="agent-result" style="margin-top:14px;"></div>
     </div>
   </main>
 
@@ -143,87 +131,27 @@
     renderHeader('Ingestion');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-ingestion']);
 
-    let invoices = [];
-
-    function setRunLoading(loading) {
-      const b = document.getElementById('btn-run');
-      b.disabled = loading;
-      b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Run Ingestion Agent';
-    }
-
-    function renderInvoiceOptions() {
-      document.getElementById('inv-select').innerHTML = invoices.map(i =>
-        `<option value="${esc(i.invoiceId)}">${esc(i.invoiceId)} — ${esc(i.vendorName)}</option>`
-      ).join('');
-    }
-
-    document.getElementById('btn-run').addEventListener('click', async () => {
-      const id = document.getElementById('inv-select').value;
-      const inv = invoices.find(i => i.invoiceId === id);
-      if (!inv) return;
-      setRunLoading(true);
-      document.getElementById('agent-result').innerHTML = '';
-      try {
-        const res = await fetch('/ingestion/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json: JSON.stringify(inv, null, 2) })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        renderAgentResult(data.response);
-      } catch (err) {
-        document.getElementById('agent-result').innerHTML =
-          `<div class="empty error">Error: ${esc(err.message)}</div>`;
-      }
-      setRunLoading(false);
-    });
-
-    function renderAgentResult(response) {
-      const m = response && response.match(/\{[\s\S]*\}/);
-      const parsed = m ? (() => { try { return JSON.parse(m[0]); } catch { return null; } })() : null;
-      if (parsed) {
-        document.getElementById('agent-result').innerHTML = `
-          <div class="field-grid">
-            <div class="k">Invoice ID</div><div>${esc(parsed.invoiceId)}</div>
-            <div class="k">Vendor</div><div>${esc(parsed.vendorName)}</div>
-            <div class="k">Invoice Date</div><div>${esc(parsed.invoiceDate)}</div>
-            <div class="k">Currency</div><div>${esc(parsed.currency)}</div>
-            <div class="k">Total Amount</div><div>${esc(parsed.totalAmount)}</div>
-            <div class="k">Status</div><div>${statusBadge(parsed.ingestionStatus)}</div>
-            <div class="k">Reason</div><div>${esc(parsed.reason)}</div>
-          </div>
-          <h3 style="margin-top:14px;font-size:0.9rem;">Raw Response</h3>
-          <pre>${esc(response)}</pre>`;
-      } else {
-        document.getElementById('agent-result').innerHTML = `<pre>${esc(response)}</pre>`;
-      }
-    }
-
+    let allScenarios = [];
     let allInvoices = [];
-    let allEmails = [];
-    let currentEmail = null;
+    let currentScenario = null;
 
-    async function loadEmails() {
-      const inPages = location.pathname.includes('/pages/');
-      const prefix = inPages ? '../' : '';
-      const res = await fetch(prefix + 'data/emails.json');
+    async function loadScenarios() {
+      const res = await fetch('/ingestion/scenarios');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      return data.emails;
+      return res.json();
     }
 
-    function renderEmailList(emails) {
+    function renderScenarioList(scenarios) {
       const body = document.getElementById('email-list-body');
-      if (!emails.length) { body.innerHTML = '<div class="empty" style="padding:20px;">No emails.</div>'; return; }
-      body.innerHTML = emails.map((e, i) => `
-        <div class="email-item" data-id="${e.id}" tabindex="0" role="button" aria-label="Email from ${esc(e.fromName)}">
+      if (!scenarios.length) { body.innerHTML = '<div class="empty" style="padding:20px;">No scenarios.</div>'; return; }
+      body.innerHTML = scenarios.map(s => `
+        <div class="email-item" data-name="${esc(s.name)}" tabindex="0" role="button" aria-label="Scenario ${esc(s.name)}">
           <div class="email-item-from">
-            <span><span class="email-unread-dot"></span>${esc(e.fromName)}</span>
-            <span class="email-item-date">${esc(e.date)}</span>
+            <span><span class="email-unread-dot"></span>${esc(s.email.fromName)}</span>
+            <span class="email-item-date">${esc(s.email.date)}</span>
           </div>
-          <div class="email-item-subject">${esc(e.subject)}</div>
-          <div class="email-item-preview">${esc(e.preview)}</div>
+          <div class="email-item-subject">${esc(s.email.subject)}</div>
+          <div class="email-item-preview">${esc(s.email.preview)}</div>
         </div>`).join('');
 
       body.querySelectorAll('.email-item').forEach(item => {
@@ -231,16 +159,17 @@
           body.querySelectorAll('.email-item').forEach(el => el.classList.remove('selected'));
           item.classList.add('selected');
           item.querySelector('.email-unread-dot')?.remove();
-          const email = emails.find(e => e.id === Number(item.dataset.id));
-          if (email) showEmailDetail(email);
+          const scenario = scenarios.find(s => s.name === item.dataset.name);
+          if (scenario) showScenarioDetail(scenario);
         };
         item.addEventListener('click', select);
         item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') select(); });
       });
     }
 
-    function showEmailDetail(email) {
-      currentEmail = email;
+    function showScenarioDetail(scenario) {
+      currentScenario = scenario;
+      const email = scenario.email;
       const detail = document.getElementById('email-detail');
       detail.innerHTML = `
         <div class="email-subject-line">${esc(email.subject)}</div>
@@ -251,14 +180,12 @@
         </div>
         <div class="email-body">${esc(email.body)}</div>
         <button class="btn-process" id="btn-process-email">⚙ Process Selected Email</button>`;
-      document.getElementById('btn-process-email').addEventListener('click', processSelectedEmail);
-      const firstInvoiceId = email.attachments?.[0]?.invoiceId;
-      if (firstInvoiceId) setScenario(firstInvoiceId);
-      renderAttachments(email.attachments);
+      document.getElementById('btn-process-email').addEventListener('click', processSelectedScenario);
+      renderAttachments(email.attachments || []);
     }
 
-    async function processSelectedEmail() {
-      if (!currentEmail) return;
+    async function processSelectedScenario() {
+      if (!currentScenario) return;
       const btn = document.getElementById('btn-process-email');
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span>Processing…';
@@ -268,51 +195,66 @@
       resultCard.style.display = '';
       resultArea.innerHTML = '<div class="empty">Running agent…</div>';
 
-      const emailJson = JSON.stringify({
-        id: currentEmail.id,
-        from: currentEmail.from,
-        fromName: currentEmail.fromName,
-        to: currentEmail.to,
-        subject: currentEmail.subject,
-        date: currentEmail.date,
-        body: currentEmail.body
-      }, null, 2);
-
-      const invoiceMap = {};
-      allInvoices.forEach(inv => { invoiceMap[inv.invoiceId] = inv; });
-      const attachmentData = (currentEmail.attachments || []).map(att => ({
-        name: att.name,
-        invoiceId: att.invoiceId,
-        invoice: invoiceMap[att.invoiceId] || null
-      }));
-      const attachmentJson = JSON.stringify(attachmentData, null, 2);
-
       try {
-        const res = await fetch('/ingestion/process-email', {
+        const res = await fetch('/ingestion/process-scenario', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emailJson, attachmentJson })
+          body: JSON.stringify({ scenarioName: currentScenario.name })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-
-        setEmailFolder({ folder: data.folder, savedFiles: data.savedFiles });
-
-        const filesJson = JSON.stringify(data.savedFiles, null, 2);
-        resultArea.innerHTML = `
-          <div style="margin-bottom:10px;font-size:0.88rem;color:#166534;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 12px;">
-            📁 Saved to folder <strong>${esc(data.folder)}</strong>
-          </div>
-          <h3 style="font-size:0.88rem;margin-bottom:4px;">Saved Files</h3>
-          <pre>${esc(filesJson)}</pre>
-          <h3 style="font-size:0.88rem;margin:10px 0 4px;">Agent Response</h3>
-          <pre>${esc(data.agentResponse)}</pre>`;
+        renderProcessResult(data);
       } catch (err) {
         resultArea.innerHTML = `<div class="empty error" style="color:#991b1b;">Error: ${esc(err.message)}</div>`;
       }
 
       btn.disabled = false;
       btn.innerHTML = '⚙ Process Selected Email';
+    }
+
+    function renderProcessResult(data) {
+      const resultArea = document.getElementById('process-result-area');
+      const agentResp = data.agentResponse || '';
+      const m = agentResp.match(/\{[\s\S]*\}/);
+      let parsed = null;
+      if (m) { try { parsed = JSON.parse(m[0]); } catch {} }
+
+      let summaryHtml = '';
+      if (parsed) {
+        const statusBg = parsed.ingestionStatus === 'accepted' ? '#f0fdf4' : '#fef2f2';
+        const statusBorder = parsed.ingestionStatus === 'accepted' ? '#86efac' : '#fca5a5';
+        summaryHtml = `
+          <div style="background:${statusBg};border:1px solid ${statusBorder};border-radius:6px;padding:10px 14px;margin-bottom:12px;">
+            <div style="font-weight:700;font-size:0.9rem;margin-bottom:4px;">
+              ${statusBadge(parsed.ingestionStatus)} &nbsp; ${esc(parsed.reason || '')}
+            </div>
+          </div>`;
+
+        if (Array.isArray(parsed.invoices) && parsed.invoices.length) {
+          summaryHtml += parsed.invoices.map(inv => `
+            <div class="invoice-card">
+              <h4>📄 ${esc(inv.fileName || inv.invoiceId || 'Invoice')}</h4>
+              <div class="field-grid">
+                <div class="k">Invoice ID</div><div>${esc(inv.invoiceId)}</div>
+                <div class="k">Vendor</div><div>${esc(inv.vendorName)}</div>
+                <div class="k">Invoice Date</div><div>${esc(inv.invoiceDate)}</div>
+                <div class="k">Currency</div><div>${esc(inv.currency)}</div>
+                <div class="k">Total Amount</div><div>${esc(String(inv.totalAmount))}</div>
+              </div>
+            </div>`).join('');
+        }
+      }
+
+      const filesHtml = (data.savedFiles || []).map(f => `<span style="margin-right:10px;">📄 ${esc(f)}</span>`).join('');
+      resultArea.innerHTML = `
+        <div style="font-size:0.85rem;color:#166534;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 12px;margin-bottom:12px;">
+          📁 Run folder: <strong>${esc(data.runFolder)}</strong> &nbsp;|&nbsp; ${filesHtml}
+        </div>
+        ${summaryHtml}
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;font-size:0.82rem;color:var(--muted);">Raw Agent Response</summary>
+          <pre style="margin-top:6px;">${esc(agentResp)}</pre>
+        </details>`;
     }
 
     function renderAttachments(attachments) {
@@ -332,68 +274,22 @@
             <td>${esc(inv.invoiceDate || '—')}</td>
             <td>${inv.totalAmount != null ? fmtMoney(inv.totalAmount, inv.currency) : '—'}</td>
             <td>${statusBadge(inv.ingestionStatus || 'pending')}</td>
-            <td>
-              <button class="btn-fabric" data-name="${esc(att.name)}" data-ref="${att.sampleRef}" type="button">Save to Fabric</button>
-              <span class="fabric-status" id="fabric-status-${esc(att.invoiceId)}"></span>
-            </td>
           </tr>`;
       }).join('');
 
       area.innerHTML = `
         <table class="data">
-          <thead><tr><th>Document</th><th>Vendor</th><th>Invoice Date</th><th>Total</th><th>Status</th><th>Fabric</th></tr></thead>
+          <thead><tr><th>Document</th><th>Vendor</th><th>Invoice Date</th><th>Total</th><th>Status</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
-
-      area.querySelectorAll('.btn-fabric').forEach(btn => {
-        btn.addEventListener('click', () => saveToFabric(btn));
-      });
-    }
-
-    async function saveToFabric(btn) {
-      const docName = btn.dataset.name;
-      const sampleRef = btn.dataset.ref;
-      const statusEl = btn.nextElementSibling;
-
-      btn.disabled = true;
-      statusEl.textContent = 'Uploading…';
-      statusEl.className = 'fabric-status';
-
-      try {
-        const inPages = location.pathname.includes('/pages/');
-        const prefix = inPages ? '..' : '';
-        const imgRes = await fetch(`${prefix}/samples/sample${sampleRef}.png`);
-        if (!imgRes.ok) throw new Error(`Could not load sample file: HTTP ${imgRes.status}`);
-        const blob = await imgRes.blob();
-        const file = new File([blob], docName, { type: 'application/pdf' });
-
-        const form = new FormData();
-        form.append('file', file);
-
-        const res = await fetch('/ingestion/save-to-fabric', { method: 'POST', body: form });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-
-        statusEl.textContent = '✓ Saved';
-        statusEl.className = 'fabric-status ok';
-        btn.textContent = 'Saved ✓';
-        btn.disabled = true;
-      } catch (err) {
-        statusEl.textContent = `✗ ${err.message}`;
-        statusEl.className = 'fabric-status err';
-        btn.disabled = false;
-      }
     }
 
     (async () => {
       try {
-        const [{ invoices }, emails] = await Promise.all([loadWorkflowData(), loadEmails()]);
+        const [scenarios, { invoices }] = await Promise.all([loadScenarios(), loadWorkflowData()]);
+        allScenarios = scenarios;
         allInvoices = invoices;
-        allEmails = emails;
-        renderEmailList(emails);
-        document.getElementById('inv-select').innerHTML = invoices.map(i =>
-          `<option value="${esc(i.invoiceId)}">${esc(i.invoiceId)} — ${esc(i.vendorName)}</option>`
-        ).join('');
+        renderScenarioList(scenarios);
       } catch (err) {
         document.getElementById('email-list-body').innerHTML =
           `<div class="empty" style="padding:20px;color:#991b1b;">${esc(err.message)}</div>`;
@@ -402,3 +298,4 @@
   </script>
 </body>
 </html>
+

@@ -1,0 +1,13 @@
+{
+  "id": 4,
+  "from": "billing@apex-technology.com",
+  "fromName": "Apex Technology Solutions",
+  "to": "ap@company.com",
+  "subject": "Invoice INV-2026-0004 – May IT Equipment & Services",
+  "date": "2026-05-16",
+  "preview": "Please find attached our May invoice for IT equipment and professional services.",
+  "body": "Dear Accounts Payable Team,\n\nPlease find attached invoice #INV-2026-0004 covering IT equipment procurement and professional services for May 2026.\n\nTotal Amount: USD 28,640.00\nDue Date: June 15, 2026\n\nKindly process payment at your earliest convenience. For any queries, please contact our billing department.\n\nBest regards,\nApex Technology Solutions Billing Team",
+  "attachments": [
+    { "name": "apex-technology-may.pdf", "invoiceId": "INV-2026-0004" }
+  ]
+}

@@ -12,11 +12,18 @@ public class InvLdgAgIngestion : BaseAgent
     }
 
     private static string GetInstructions() => """
-        You are an ingestion agent. You receive incoming vendor invoice documents (PDF or image) dropped into the inbox.
+        You are an ingestion agent. You receive incoming vendor invoice emails with attached PDF documents.
         Your job is to:
-          1. Confirm the document is a vendor invoice (not a statement, reminder, or marketing material).
-          2. Extract the basic envelope: invoiceId, vendorName, invoiceDate, currency, totalAmount.
-          3. Tag the document with an ingestionStatus of "accepted" or "rejected" and a short reason.
-          4. Return a single JSON object. No text outside the JSON.
+          1. Review the email to confirm it contains vendor invoices (not a statement, reminder, or marketing material).
+          2. For each PDF blob URL provided, use the extractDoc_DI tool to extract the document content.
+          3. From each extracted document, identify: invoiceId, vendorName, invoiceDate, currency, totalAmount.
+          4. Return a single JSON object with no text outside it:
+             {
+               "ingestionStatus": "accepted" or "rejected",
+               "reason": "brief explanation",
+               "invoices": [
+                 { "fileName": "...", "invoiceId": "...", "vendorName": "...", "invoiceDate": "...", "currency": "...", "totalAmount": 0 }
+               ]
+             }
         """;
 }
