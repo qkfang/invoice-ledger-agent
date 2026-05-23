@@ -37,11 +37,6 @@
       <button id="btn-run">Run Processing Agent</button>
     </div>
 
-    <div class="card">
-      <h2>Processing Rules</h2>
-      <div id="rules-area"><div class="empty">Loading...</div></div>
-    </div>
-
     <div class="card" id="io-card" style="display:none;">
       <h2>Agent Input</h2>
       <div id="input-area" class="io-box"></div>
@@ -70,57 +65,43 @@
       b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Run Processing Agent';
     }
 
-    function renderRules(rules) {
-      const rows = rules.map(r => `
-        <tr>
-          <td><span class="rule-pill">${esc(r.id)}</span></td>
-          <td><strong>${esc(r.name)}</strong></td>
-          <td>${esc(r.description)}</td>
-          <td>${statusBadge(r.outcome)}</td>
-        </tr>`).join('');
-      document.getElementById('rules-area').innerHTML = `
-        <table class="data">
-          <thead><tr><th style="width:60px;">ID</th><th style="width:220px;">Name</th><th>Condition</th><th style="width:120px;">Outcome</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
-    }
-
     function renderInvoiceOptions() {
       document.getElementById('invoice-select').innerHTML = invoices.map(i =>
         `<option value="${esc(i.invoiceId)}">${esc(i.invoiceId)} — ${esc(i.vendorName)} (${fmtMoney(i.totalAmount, i.currency)})</option>`
       ).join('');
     }
 
-    function renderResult(invoice, result) {
-      const rows = result.results.map(r => `
+    function renderResult(result) {
+      const header = `
+        <div class="summary-row">
+          <div class="summary-pill"><div class="n">${esc(result.businessName)}</div><div class="l">Business</div></div>
+          <div class="summary-pill"><div class="n">${esc(result.fromDate)}</div><div class="l">From Date</div></div>
+          <div class="summary-pill"><div class="n">${esc(result.toDate)}</div><div class="l">To Date</div></div>
+          <div class="summary-pill"><div class="n">${fmtMoney(result.originalInvoiceAmount, result.originalInvoiceCurrency)}</div><div class="l">Original Amount</div></div>
+          <div class="summary-pill"><div class="n">${esc(result.exchangeRate)}</div><div class="l">Exchange Rate</div></div>
+          <div class="summary-pill"><div class="n">${fmtMoney(result.convertedInvoiceAmount, 'AUD')}</div><div class="l">Converted (AUD)</div></div>
+        </div>`;
+
+      const rows = (result.lineItems || []).map(r => `
         <tr>
-          <td>${esc(r.categoryName)}</td>
-          <td>${esc(r.description)}</td>
-          <td>${fmtMoney(r.unitPrice, invoice.currency)}</td>
-          <td>${fmtMoney(r.lineTotal, invoice.currency)}</td>
-          <td>${esc(r.matchedLedgerCategory)} / ${esc(r.matchedLedgerItem)}</td>
-          <td><span class="rule-pill">${esc(r.ruleApplied)}</span></td>
-          <td>${statusBadge(r.status)}${r.humanInLoop ? ' <span class="rule-pill" style="background:#fef3c7;color:#92400e;">HITL</span>' : ''}</td>
-          <td style="color:var(--muted);">${esc(r.reason)}</td>
-          <td class="reasoning-text">${esc(r.reasoning)}</td>
+          <td>${esc(r.lineItem)}</td>
+          <td>${esc(r.lineItemCategory)}</td>
+          <td>${esc(r.lineItemDescription)}</td>
+          <td>${esc(r.businessName)}</td>
+          <td>${r.quantity != null ? r.quantity : '—'}</td>
+          <td>${r.unitPrice != null ? fmtMoney(r.unitPrice, result.originalInvoiceCurrency) : '—'}</td>
+          <td>${r.lineTotal != null ? fmtMoney(r.lineTotal, result.originalInvoiceCurrency) : '—'}</td>
         </tr>`).join('');
 
       document.getElementById('result-area').innerHTML = `
-        <div class="summary-row">
-          <div class="summary-pill"><div class="n">${result.summary.totalProcessed}</div><div class="l">Processed</div></div>
-          <div class="summary-pill"><div class="n" style="color:#166534;">${result.summary.matched}</div><div class="l">Matched</div></div>
-          <div class="summary-pill"><div class="n" style="color:#92400e;">${result.summary.review}</div><div class="l">Review</div></div>
-          <div class="summary-pill"><div class="n" style="color:#991b1b;">${result.summary.exception}</div><div class="l">Exception</div></div>
-        </div>
+        ${header}
         <table class="data">
           <thead><tr>
-            <th>Category</th><th>Description</th><th>Unit Price</th><th>Line Total</th>
-            <th>Ledger Match</th><th>Rule</th><th>Status</th><th>Reason</th><th>Reasoning</th>
+            <th>Line Item</th><th>Category</th><th>Description</th><th>Business</th>
+            <th>Qty</th><th>Unit Price</th><th>Line Total</th>
           </tr></thead>
           <tbody>${rows}</tbody>
-        </table>
-        <h3 style="margin-top:14px;font-size:0.9rem;">Agent notes</h3>
-        <div class="notes-box">${esc(result.notes)}</div>`;
+        </table>`;
     }
 
     function parseAgentJson(text) {
@@ -154,7 +135,7 @@
 
         const result = parseAgentJson(data.response);
         if (result) {
-          renderResult(inv, result);
+          renderResult(result);
         } else {
           document.getElementById('result-area').innerHTML = `<pre>${esc(data.response)}</pre>`;
         }
@@ -169,7 +150,6 @@
       try {
         const data = await loadWorkflowData();
         invoices = data.invoices;
-        renderRules(data.rules);
         renderInvoiceOptions();
         const scenario = getScenario();
         if (scenario) {
@@ -179,7 +159,7 @@
         }
         renderScenarioBanner('scenario-banner', invoices);
       } catch (err) {
-        document.getElementById('rules-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
+        document.getElementById('result-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
       }
     })();
   </script>
