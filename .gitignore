@@ -92,4 +92,5 @@ azure.err
 
 # Local run artifacts
 **/wwwroot/temp/run-*/
+**/wwwroot/temp/scenario-cache/
 
