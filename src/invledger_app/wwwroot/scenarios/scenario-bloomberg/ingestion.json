@@ -1,0 +1,13 @@
+{
+  "id": 4,
+  "from": "billing@bloomberg.net",
+  "fromName": "Bloomberg L.P.",
+  "to": "ap@company.com",
+  "subject": "Invoice INV-2026-0004 – May Bloomberg Terminal & Enterprise Data Services",
+  "date": "2026-05-16",
+  "preview": "Please find attached your May invoice for Bloomberg Professional Services and enterprise data feeds.",
+  "body": "Dear Accounts Payable Team,\n\nPlease find attached invoice #INV-2026-0004 covering Bloomberg Professional terminal licenses, enterprise data feeds, and analytics modules for the May 2026 service period.\n\nTotal Amount: USD 48,177.19\nDue Date: June 15, 2026\nPayment Terms: Net 30\n\nRemit payment via wire transfer using the banking details on the invoice. For billing inquiries, please reply to this email and reference the invoice number.\n\nBest regards,\nBloomberg L.P. – Global Billing",
+  "attachments": [
+    { "name": "bloomberg-may.pdf", "invoiceId": "INV-2026-0004" }
+  ]
+}

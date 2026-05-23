@@ -1,0 +1,13 @@
+{
+  "id": 6,
+  "from": "ar@factset.com",
+  "fromName": "FactSet Research Systems Inc.",
+  "to": "ap@company.com",
+  "subject": "Invoice INV-2026-0006 – May FactSet Workstation & Analytics Services",
+  "date": "2026-05-19",
+  "preview": "Attached is your May invoice for FactSet workstation licenses, data feeds, and analytics modules.",
+  "body": "Dear Accounts Payable Team,\n\nPlease find attached invoice #INV-2026-0006 covering FactSet workstation seats, fundamentals data feed, portfolio analytics, estimates, and premium support for May 2026.\n\nTotal Amount: USD 44,932.88\nDue Date: June 18, 2026\nPayment Terms: Net 30\n\nPlease remit payment by the due date and reference the invoice number on your transfer. For any questions, contact our accounts receivable team.\n\nBest regards,\nFactSet Research Systems Inc. – Billing Department",
+  "attachments": [
+    { "name": "factset-may.pdf", "invoiceId": "INV-2026-0006" }
+  ]
+}

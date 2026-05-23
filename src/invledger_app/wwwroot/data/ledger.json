@@ -1,57 +1,106 @@
 {
-  "currency": "USD",
+  "currency": "AUD",
   "categories": [
     {
-      "categoryName": "Office Supplies",
-      "ledgerCode": "6000",
-      "approvedBudget": 12000.00,
-      "ytdBalance": 4520.75,
+      "categoryName": "Market Data Terminals",
+      "ledgerCode": "7000",
+      "approvedBudget": 850000.00,
+      "ytdBalance": 312400.00,
       "items": [
-        { "itemName": "A4 Paper (case)", "expectedUnitPrice": 40.00, "aliases": ["A4 Paper", "Copy Paper"] },
-        { "itemName": "Printer Toner Cartridge", "expectedUnitPrice": 220.00, "aliases": ["Toner", "Toner Cartridge"] },
-        { "itemName": "Pens & Stationery", "expectedUnitPrice": 25.00, "aliases": ["Stationery"] }
+        { "itemName": "Bloomberg Terminal (per seat / month)", "expectedUnitPrice": 3600.00, "aliases": ["Bloomberg", "BBG Terminal", "Bloomberg Professional"] },
+        { "itemName": "Refinitiv Eikon (per seat / month)", "expectedUnitPrice": 2300.00, "aliases": ["Eikon", "LSEG Workspace", "Refinitiv"] },
+        { "itemName": "FactSet Workstation (per seat / month)", "expectedUnitPrice": 1750.00, "aliases": ["FactSet"] },
+        { "itemName": "S&P Capital IQ Pro (per seat / month)", "expectedUnitPrice": 1500.00, "aliases": ["CapIQ", "Capital IQ"] }
       ]
     },
     {
-      "categoryName": "IT Equipment",
-      "ledgerCode": "6100",
-      "approvedBudget": 35000.00,
-      "ytdBalance": 18750.00,
+      "categoryName": "Research & News Feeds",
+      "ledgerCode": "7100",
+      "approvedBudget": 220000.00,
+      "ytdBalance": 78650.00,
       "items": [
-        { "itemName": "USB-C Docking Station", "expectedUnitPrice": 290.00, "aliases": ["Docking Station", "USB Dock"] },
-        { "itemName": "Laptop", "expectedUnitPrice": 1800.00, "aliases": ["Notebook", "Workstation Laptop"] },
-        { "itemName": "Monitor", "expectedUnitPrice": 380.00, "aliases": ["Display", "External Monitor"] }
+        { "itemName": "Morningstar Direct (per seat / month)", "expectedUnitPrice": 1850.00, "aliases": ["Morningstar", "MStar Direct"] },
+        { "itemName": "Morningstar Equity Research Report", "expectedUnitPrice": 260.00, "aliases": ["MStar Research", "Equity Research Note"] },
+        { "itemName": "Bloomberg News Enterprise Feed (monthly)", "expectedUnitPrice": 4200.00, "aliases": ["BBG News", "Bloomberg News"] },
+        { "itemName": "Dow Jones Newswires (monthly)", "expectedUnitPrice": 1950.00, "aliases": ["Dow Jones", "WSJ Pro Newswire"] },
+        { "itemName": "ASX Company Announcements Feed (monthly)", "expectedUnitPrice": 850.00, "aliases": ["ASX Announcements"] }
+      ]
+    },
+    {
+      "categoryName": "FX & Rates Data",
+      "ledgerCode": "7200",
+      "approvedBudget": 180000.00,
+      "ytdBalance": 64200.00,
+      "items": [
+        { "itemName": "EBS Live FX Feed (monthly)", "expectedUnitPrice": 3800.00, "aliases": ["EBS", "EBS FX"] },
+        { "itemName": "Refinitiv Matching FX (monthly)", "expectedUnitPrice": 3500.00, "aliases": ["Refinitiv Matching", "FXall"] },
+        { "itemName": "WM/Refinitiv FX Benchmark Rates (monthly)", "expectedUnitPrice": 1600.00, "aliases": ["WM Reuters", "WMR Fix"] },
+        { "itemName": "CLS Settlement Data (monthly)", "expectedUnitPrice": 1200.00, "aliases": ["CLS"] },
+        { "itemName": "ICAP / TP ICAP Rates Feed (monthly)", "expectedUnitPrice": 2100.00, "aliases": ["TP ICAP", "ICAP Rates"] }
+      ]
+    },
+    {
+      "categoryName": "Exchange & Market Access",
+      "ledgerCode": "7300",
+      "approvedBudget": 420000.00,
+      "ytdBalance": 168900.00,
+      "items": [
+        { "itemName": "ASX Market Data Licence (monthly)", "expectedUnitPrice": 5200.00, "aliases": ["ASX Data", "ASX Licence"] },
+        { "itemName": "CBOE Australia Connectivity (monthly)", "expectedUnitPrice": 3100.00, "aliases": ["CBOE", "Chi-X"] },
+        { "itemName": "CME Globex Market Data (monthly)", "expectedUnitPrice": 4500.00, "aliases": ["CME", "Globex"] },
+        { "itemName": "ICE Futures Data Feed (monthly)", "expectedUnitPrice": 3900.00, "aliases": ["ICE Data", "ICE Futures"] },
+        { "itemName": "FIX Connectivity Port (monthly)", "expectedUnitPrice": 1200.00, "aliases": ["FIX Port"] },
+        { "itemName": "Clearing Fee (per trade)", "expectedUnitPrice": 0.85, "aliases": ["Clearing", "ASX Clear"] }
+      ]
+    },
+    {
+      "categoryName": "Trading Technology",
+      "ledgerCode": "7400",
+      "approvedBudget": 380000.00,
+      "ytdBalance": 152300.00,
+      "items": [
+        { "itemName": "Co-location Rack Space (monthly)", "expectedUnitPrice": 8500.00, "aliases": ["Colo", "Co-lo Cabinet"] },
+        { "itemName": "Low-Latency Cross-Connect (monthly)", "expectedUnitPrice": 950.00, "aliases": ["Cross Connect"] },
+        { "itemName": "OMS Platform Licence (per seat / month)", "expectedUnitPrice": 1400.00, "aliases": ["OMS", "Order Management"] },
+        { "itemName": "EMS Platform Licence (per seat / month)", "expectedUnitPrice": 1600.00, "aliases": ["EMS", "Execution Management"] },
+        { "itemName": "Algo Container Licence (per strategy / month)", "expectedUnitPrice": 2200.00, "aliases": ["Algo Licence", "Strategy Licence"] }
+      ]
+    },
+    {
+      "categoryName": "Risk & Analytics",
+      "ledgerCode": "7500",
+      "approvedBudget": 260000.00,
+      "ytdBalance": 91500.00,
+      "items": [
+        { "itemName": "MSCI RiskMetrics (monthly)", "expectedUnitPrice": 4800.00, "aliases": ["RiskMetrics", "MSCI Risk"] },
+        { "itemName": "Bloomberg PORT Analytics (per seat / month)", "expectedUnitPrice": 1200.00, "aliases": ["PORT", "Bloomberg PORT"] },
+        { "itemName": "Numerix Pricing Library (monthly)", "expectedUnitPrice": 5200.00, "aliases": ["Numerix"] },
+        { "itemName": "Axioma Portfolio Risk (monthly)", "expectedUnitPrice": 3600.00, "aliases": ["Axioma"] }
+      ]
+    },
+    {
+      "categoryName": "Compliance & Regulatory",
+      "ledgerCode": "7600",
+      "approvedBudget": 200000.00,
+      "ytdBalance": 73450.00,
+      "items": [
+        { "itemName": "Trade Surveillance Platform (monthly)", "expectedUnitPrice": 6800.00, "aliases": ["Surveillance", "NICE Actimize"] },
+        { "itemName": "AFSL Annual Levy", "expectedUnitPrice": 9500.00, "aliases": ["ASIC Levy", "AFSL"] },
+        { "itemName": "KYC / AML Screening (per check)", "expectedUnitPrice": 4.50, "aliases": ["KYC", "AML Screening"] },
+        { "itemName": "Regulatory Reporting Service (monthly)", "expectedUnitPrice": 3200.00, "aliases": ["Reg Reporting", "DTCC Reporting"] },
+        { "itemName": "Voice Recording & Archive (per seat / month)", "expectedUnitPrice": 180.00, "aliases": ["Turret Recording", "Voice Archive"] }
       ]
     },
     {
       "categoryName": "Professional Services",
-      "ledgerCode": "6200",
-      "approvedBudget": 80000.00,
-      "ytdBalance": 22500.00,
+      "ledgerCode": "7700",
+      "approvedBudget": 240000.00,
+      "ytdBalance": 82400.00,
       "items": [
-        { "itemName": "Solution Architecture Review", "expectedUnitPrice": 250.00, "aliases": ["Architecture Review", "Solution Review"] },
-        { "itemName": "Onsite Workshop Facilitation", "expectedUnitPrice": 250.00, "aliases": ["Workshop", "Facilitation"] }
-      ]
-    },
-    {
-      "categoryName": "Travel",
-      "ledgerCode": "6300",
-      "approvedBudget": 20000.00,
-      "ytdBalance": 6820.00,
-      "items": [
-        { "itemName": "Air Travel (economy)", "expectedUnitPrice": 450.00, "aliases": ["Flight", "Airfare"] },
-        { "itemName": "Hotel Accommodation (per night)", "expectedUnitPrice": 140.00, "aliases": ["Hotel", "Lodging"] },
-        { "itemName": "Meals", "expectedUnitPrice": 45.00, "aliases": ["Per Diem"] }
-      ]
-    },
-    {
-      "categoryName": "Shipping & Freight",
-      "ledgerCode": "6400",
-      "approvedBudget": 15000.00,
-      "ytdBalance": 4210.00,
-      "items": [
-        { "itemName": "Domestic Freight", "expectedUnitPrice": 175.00, "aliases": ["Freight"] },
-        { "itemName": "Express Courier", "expectedUnitPrice": 95.00, "aliases": ["Courier", "Overnight"] }
+        { "itemName": "External Audit (per hour)", "expectedUnitPrice": 480.00, "aliases": ["Audit", "External Audit"] },
+        { "itemName": "Legal Counsel (per hour)", "expectedUnitPrice": 650.00, "aliases": ["Legal", "Counsel"] },
+        { "itemName": "Tax Advisory (per hour)", "expectedUnitPrice": 520.00, "aliases": ["Tax Advice"] },
+        { "itemName": "Quant Modelling Consultant (per day)", "expectedUnitPrice": 2400.00, "aliases": ["Quant Consultant", "Modelling Consultant"] }
       ]
     }
   ],

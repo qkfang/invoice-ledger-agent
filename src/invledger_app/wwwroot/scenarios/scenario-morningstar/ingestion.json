@@ -1,0 +1,13 @@
+{
+  "id": 5,
+  "from": "billing@morningstar.com",
+  "fromName": "Morningstar, Inc.",
+  "to": "ap@company.com",
+  "subject": "Invoice INV-2026-0005 – May Morningstar Research & Data Subscriptions",
+  "date": "2026-05-17",
+  "preview": "Attached is your May invoice for Morningstar Direct, Advisor Workstation, and related data services.",
+  "body": "Dear Accounts Payable Team,\n\nPlease find attached invoice #INV-2026-0005 for Morningstar research platforms, advisor tools, ESG data, and PitchBook platform access for the May 2026 billing cycle.\n\nTotal Amount: USD 31,156.13\nDue Date: June 16, 2026\nPayment Terms: Net 30\n\nKindly process payment by the due date. Reference invoice number on remittance. Contact billing@morningstar.com for any questions.\n\nThank you,\nMorningstar, Inc. – Accounts Receivable",
+  "attachments": [
+    { "name": "morningstar-may.pdf", "invoiceId": "INV-2026-0005" }
+  ]
+}
