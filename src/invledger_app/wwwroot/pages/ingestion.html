@@ -131,7 +131,6 @@
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-ingestion']);
 
     let allScenarios = [];
-    let allInvoices = [];
     let currentScenario = null;
 
     async function loadScenarios() {
@@ -303,34 +302,24 @@
       if (!area) return;
       if (!attachments.length) { area.innerHTML = ''; return; }
 
-      const invoiceMap = {};
-      allInvoices.forEach(inv => { invoiceMap[inv.invoiceId] = inv; });
-
-      const rows = attachments.map(att => {
-        const inv = invoiceMap[att.invoiceId] || {};
-        return `
+      const rows = attachments.map(att => `
           <tr>
             <td>📄 <strong>${esc(att.name)}</strong></td>
-            <td>${esc(inv.vendorName || '—')}</td>
-            <td>${esc(inv.invoiceDate || '—')}</td>
-            <td>${inv.totalAmount != null ? fmtMoney(inv.totalAmount, inv.currency) : '—'}</td>
-            <td>${statusBadge(inv.ingestionStatus || 'pending')}</td>
-          </tr>`;
-      }).join('');
+            <td>${statusBadge('pending')}</td>
+          </tr>`).join('');
 
       area.innerHTML = `
         <div style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">📎 Attachments</div>
         <table class="data">
-          <thead><tr><th>Document</th><th>Vendor</th><th>Invoice Date</th><th>Total</th><th>Status</th></tr></thead>
+          <thead><tr><th>Document</th><th>Status</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
     }
 
     (async () => {
       try {
-        const [scenarios, { invoices }] = await Promise.all([loadScenarios(), loadWorkflowData()]);
+        const scenarios = await loadScenarios();
         allScenarios = scenarios;
-        allInvoices = invoices;
         renderScenarioList(scenarios);
       } catch (err) {
         document.getElementById('email-list-body').textContent = `Error: ${err.message}`;

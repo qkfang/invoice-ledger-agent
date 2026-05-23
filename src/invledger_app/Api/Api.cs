@@ -308,25 +308,113 @@ public static class Endpoints
             }
 
             var account = blobStorage.AccountName;
-            var pdfList = files
+            var pdfNames = files
                 .Where(b => b.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                .Select(b => new
-                {
-                    name = b,
-                    storageUrl = $"https://{account}.blob.core.windows.net/notices/{safeRun}/{b}",
-                    proxyUrl = $"/ingestion/runs/{safeRun}/{Uri.EscapeDataString(b)}"
-                })
                 .ToList();
 
-            var urlList = string.Join("\n", pdfList.Select(p => $"- {p.name}: {p.storageUrl}"));
-            var prompt = pdfList.Count == 0
+            var pdfList = new List<object>();
+            foreach (var name in pdfNames)
+            {
+                var storageUrl = $"https://{account}.blob.core.windows.net/notices/{safeRun}/{name}";
+                var proxyUrl = $"/ingestion/runs/{safeRun}/{Uri.EscapeDataString(name)}";
+
+                string? extractJson = null;
+                string? extractMarkdown = null;
+                try
+                {
+                    byte[]? pdfBytes = null;
+                    if (fromLocal)
+                    {
+                        var stream = localRunStorage.OpenRead(safeRun, name);
+                        if (stream is not null)
+                        {
+                            using var ms = new MemoryStream();
+                            await stream.CopyToAsync(ms);
+                            pdfBytes = ms.ToArray();
+                        }
+                    }
+                    else
+                    {
+                        var dl = await blobStorage.DownloadAsync($"{safeRun}/{name}");
+                        if (dl is not null)
+                        {
+                            using var ms = new MemoryStream();
+                            await dl.Value.Content.CopyToAsync(ms);
+                            pdfBytes = ms.ToArray();
+                        }
+                    }
+                    if (pdfBytes is not null)
+                    {
+                        var result = await docService.AnalyzeFromBytesAsync(BinaryData.FromBytes(pdfBytes));
+                        extractJson = result.Json;
+                        extractMarkdown = result.Markdown;
+                        var baseName = Path.GetFileNameWithoutExtension(name);
+                        await localRunStorage.WriteAllTextAsync(safeRun, $"{baseName}.extract.json", extractJson ?? string.Empty);
+                        await localRunStorage.WriteAllTextAsync(safeRun, $"{baseName}.extract.md", extractMarkdown ?? string.Empty);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "DI extract failed for {Pdf}", Sanitize(name));
+                }
+
+                pdfList.Add(new
+                {
+                    name,
+                    storageUrl,
+                    proxyUrl,
+                    extractJson,
+                    extractMarkdown
+                });
+            }
+
+            var urlList = string.Join("\n", pdfNames.Select(n => $"- {n}: https://{account}.blob.core.windows.net/notices/{safeRun}/{n}"));
+            var prompt = pdfNames.Count == 0
                 ? $"Extract invoice details from this email (no PDF attachments):\n\n{emailJson ?? "(no email)"}"
                 : $"Extract structured invoice details for each attached PDF. Use the extractDoc_DI tool against the storage URL of each PDF.\n\nEmail:\n{emailJson ?? "(no email)"}\n\nPDF Documents:\n{urlList}";
 
-            logger.LogInformation("Invoice run-from-storage: {Run}, {Count} PDF(s)", Sanitize(safeRun), pdfList.Count);
+            logger.LogInformation("Invoice run-from-storage: {Run}, {Count} PDF(s)", Sanitize(safeRun), pdfNames.Count);
             var response = await invoiceAgent.RunAsync(prompt);
 
-            return Results.Ok(new { runName = safeRun, response, pdfs = pdfList });
+            object? emailObj = null;
+            if (!string.IsNullOrEmpty(emailJson))
+            {
+                try { emailObj = JsonSerializer.Deserialize<JsonElement>(emailJson); } catch { emailObj = emailJson; }
+            }
+
+            // Persist parsed invoice JSON so processing/exception/ledger tabs can reuse it.
+            var match = System.Text.RegularExpressions.Regex.Match(response ?? string.Empty, @"\{[\s\S]*\}");
+            if (match.Success)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(match.Value);
+                    var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+                    await localRunStorage.WriteAllTextAsync(safeRun, "invoice.json", pretty);
+                }
+                catch (JsonException) { /* ignore parse failures */ }
+            }
+
+            return Results.Ok(new { runName = safeRun, response, email = emailObj, pdfs = pdfList });
+        });
+
+        app.MapGet("/invoice/runs/{runName}/invoice", async (string runName) =>
+        {
+            var safeRun = Path.GetFileName(runName);
+            if (string.IsNullOrEmpty(safeRun)) return Results.BadRequest();
+            var stream = localRunStorage.OpenRead(safeRun, "invoice.json");
+            if (stream is null) return Results.NotFound(new { error = "Invoice not extracted yet. Run the invoice agent for this run first." });
+            using var reader = new StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                return Results.Ok(doc.RootElement.Clone());
+            }
+            catch (JsonException)
+            {
+                return Results.Problem("Cached invoice.json is not valid JSON.");
+            }
         });
 
         app.MapPost("/invoice/process-doc", async (HttpRequest http) =>

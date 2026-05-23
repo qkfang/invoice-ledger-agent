@@ -29,8 +29,12 @@
 
     <div class="card">
       <h2>Approved Ledger</h2>
-      <div id="scenario-banner"></div>
-      <div id="ledger-area"><div class="empty">Loading...</div></div>
+      <div class="row">
+        <label for="run-select">Run</label>
+        <select id="run-select"><option value="">Loading runs…</option></select>
+      </div>
+      <div id="run-summary" style="margin-top:8px;font-size:0.85rem;color:var(--muted);"></div>
+      <div id="ledger-area" style="margin-top:10px;"><div class="empty">Loading...</div></div>
     </div>
 
     <div class="card">
@@ -166,15 +170,43 @@
     });
 
     (async () => {
+      const runSel = document.getElementById('run-select');
+      const summary = document.getElementById('run-summary');
       try {
-        const data = await loadWorkflowData();
-        ledger = data.ledger;
-        invoices = data.invoices || [];
-        renderScenarioBanner('scenario-banner', invoices);
+        const domain = await loadDomainData();
+        ledger = domain.ledger;
+        invoices = [];
         renderLedger();
       } catch (err) {
         document.getElementById('ledger-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
+        return;
       }
+
+      runSel.addEventListener('change', async () => {
+        const runName = runSel.value;
+        if (!runName) {
+          summary.textContent = '';
+          invoices = [];
+          renderLedger();
+          return;
+        }
+        summary.textContent = 'Loading invoice…';
+        try {
+          const payload = await loadRunInvoice(runName);
+          if (!payload) {
+            summary.innerHTML = `<span class="error">No extracted invoice for <strong>${esc(runName)}</strong>. Run the invoice agent on the Invoice tab first.</span>`;
+            invoices = [];
+          } else {
+            invoices = extractInvoiceArray(payload);
+            summary.textContent = `Showing ${invoices.length} invoice(s) from ${runName}.`;
+          }
+          renderLedger();
+        } catch (err) {
+          summary.innerHTML = `<span class="error">Error: ${esc(err.message)}</span>`;
+        }
+      });
+
+      await populateRunSelect('run-select');
     })();
   </script>
 </body>

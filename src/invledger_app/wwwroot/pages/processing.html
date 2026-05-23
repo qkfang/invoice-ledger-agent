@@ -29,12 +29,16 @@
 
     <div class="card">
       <h2>Run Processing</h2>
-      <div id="scenario-banner"></div>
       <div class="row">
-        <label for="invoice-select">Invoice</label>
-        <select id="invoice-select"></select>
+        <label for="run-select">Run</label>
+        <select id="run-select"><option value="">Loading runs…</option></select>
       </div>
-      <button id="btn-run">Run Processing Agent</button>
+      <div id="run-summary" style="margin-top:8px;font-size:0.85rem;color:var(--muted);"></div>
+      <div class="row" style="margin-top:8px;">
+        <label for="invoice-select">Invoice</label>
+        <select id="invoice-select"><option value="">Select a run first</option></select>
+      </div>
+      <button id="btn-run" disabled>Run Processing Agent</button>
     </div>
 
     <div class="card" id="io-card" style="display:none;">
@@ -66,9 +70,16 @@
     }
 
     function renderInvoiceOptions() {
-      document.getElementById('invoice-select').innerHTML = invoices.map(i =>
+      const sel = document.getElementById('invoice-select');
+      if (!invoices.length) {
+        sel.innerHTML = '<option value="">No invoices in this run</option>';
+        document.getElementById('btn-run').disabled = true;
+        return;
+      }
+      sel.innerHTML = invoices.map(i =>
         `<option value="${esc(i.invoiceId)}">${esc(i.invoiceId)} — ${esc(i.vendorName)} (${fmtMoney(i.totalAmount, i.currency)})</option>`
       ).join('');
+      document.getElementById('btn-run').disabled = false;
     }
 
     function renderResult(result) {
@@ -147,20 +158,39 @@
     });
 
     (async () => {
-      try {
-        const data = await loadWorkflowData();
-        invoices = data.invoices;
-        renderInvoiceOptions();
-        const scenario = getScenario();
-        if (scenario) {
-          const sel = document.getElementById('invoice-select');
-          const opt = [...sel.options].find(o => o.value === scenario);
-          if (opt) sel.value = scenario;
+      const runSel = document.getElementById('run-select');
+      const summary = document.getElementById('run-summary');
+
+      runSel.addEventListener('change', async () => {
+        const runName = runSel.value;
+        invoices = [];
+        document.getElementById('result-area').innerHTML = '<div class="empty">Run processing to see results.</div>';
+        document.getElementById('io-card').style.display = 'none';
+        if (!runName) {
+          summary.textContent = '';
+          document.getElementById('invoice-select').innerHTML = '<option value="">Select a run first</option>';
+          document.getElementById('btn-run').disabled = true;
+          return;
         }
-        renderScenarioBanner('scenario-banner', invoices);
-      } catch (err) {
-        document.getElementById('result-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
-      }
+        summary.textContent = 'Loading invoice…';
+        try {
+          const payload = await loadRunInvoice(runName);
+          if (!payload) {
+            summary.innerHTML = `<span class="error">No extracted invoice for <strong>${esc(runName)}</strong>. Open the Invoice tab and run the invoice agent for this run first.</span>`;
+            document.getElementById('invoice-select').innerHTML = '<option value="">No invoice available</option>';
+            document.getElementById('btn-run').disabled = true;
+            return;
+          }
+          invoices = extractInvoiceArray(payload);
+          summary.textContent = `Loaded ${invoices.length} invoice(s) from ${runName}.`;
+          renderInvoiceOptions();
+        } catch (err) {
+          summary.innerHTML = `<span class="error">Error: ${esc(err.message)}</span>`;
+          document.getElementById('btn-run').disabled = true;
+        }
+      });
+
+      await populateRunSelect('run-select');
     })();
   </script>
 </body>

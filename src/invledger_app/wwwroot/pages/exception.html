@@ -23,8 +23,12 @@
 
     <div class="card">
       <h2>Exceptions</h2>
-      <div id="scenario-banner"></div>
-      <div id="exc-area"><div class="empty">Loading...</div></div>
+      <div class="row">
+        <label for="run-select">Run</label>
+        <select id="run-select"><option value="">Loading runs…</option></select>
+      </div>
+      <div id="run-summary" style="margin-top:8px;font-size:0.85rem;color:var(--muted);"></div>
+      <div id="exc-area" style="margin-top:10px;"><div class="empty">Select a run to view exceptions.</div></div>
     </div>
 
     <div class="card">
@@ -112,20 +116,49 @@
     }
 
     (async () => {
+      const runSel = document.getElementById('run-select');
+      const summary = document.getElementById('run-summary');
+      let ledger = null, rules = null;
       try {
-        const { invoices, ledger, rules } = await loadWorkflowData();
-        const scenario = getScenario();
-        const source = scenario ? invoices.filter(i => i.invoiceId === scenario) : invoices;
-        allExceptions = [];
-        for (const inv of source) {
-          const { results } = processInvoice(inv, ledger, rules);
-          allExceptions.push(...results.filter(r => r.status === 'exception'));
-        }
-        renderScenarioBanner('scenario-banner', invoices);
-        renderExceptions();
+        const domain = await loadDomainData();
+        ledger = domain.ledger;
+        rules = domain.rules;
       } catch (err) {
         document.getElementById('exc-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
+        return;
       }
+
+      runSel.addEventListener('change', async () => {
+        const runName = runSel.value;
+        allExceptions = [];
+        if (!runName) {
+          summary.textContent = '';
+          document.getElementById('exc-area').innerHTML = '<div class="empty">Select a run to view exceptions.</div>';
+          return;
+        }
+        summary.textContent = 'Loading invoice…';
+        document.getElementById('exc-area').innerHTML = '<div class="empty">Loading…</div>';
+        try {
+          const payload = await loadRunInvoice(runName);
+          if (!payload) {
+            summary.innerHTML = `<span class="error">No extracted invoice for <strong>${esc(runName)}</strong>. Run the invoice agent on the Invoice tab first.</span>`;
+            document.getElementById('exc-area').innerHTML = '<div class="empty">No invoice available.</div>';
+            return;
+          }
+          const invoices = extractInvoiceArray(payload);
+          for (const inv of invoices) {
+            const { results } = processInvoice(inv, ledger, rules);
+            allExceptions.push(...results.filter(r => r.status === 'exception'));
+          }
+          summary.textContent = `Evaluated ${invoices.length} invoice(s) from ${runName}.`;
+          renderExceptions();
+        } catch (err) {
+          summary.innerHTML = `<span class="error">Error: ${esc(err.message)}</span>`;
+          document.getElementById('exc-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
+        }
+      });
+
+      await populateRunSelect('run-select');
     })();
   </script>
 </body>

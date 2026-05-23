@@ -22,6 +22,12 @@
     .btn-process:hover:not(:disabled) { background: #0e7490; }
     .btn-process:disabled { background: #a5f3fc; cursor: not-allowed; }
     .doc-preview iframe { width: 100%; min-height: 480px; border: none; border-radius: 4px; background: #fff; }
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+    .tabs button { background: transparent; color: var(--muted); border: 1px solid transparent; border-bottom: none; padding: 6px 14px; cursor: pointer; font-size: 0.85rem; border-radius: 6px 6px 0 0; }
+    .tabs button.active { background: #fff; color: var(--text); border-color: var(--border); font-weight: 600; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    pre.code-view { margin: 0; max-height: 560px; overflow: auto; background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 6px; font-size: 0.78rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
   </style>
 </head>
 <body>
@@ -32,9 +38,9 @@
 
     <div class="grid-2">
       <div class="card">
-        <h2>Invoice Inbox</h2>
+        <h2>Run Folder</h2>
         <div class="row">
-          <label for="email-folder">Email Folder</label>
+          <label for="email-folder">Run Folder</label>
           <select id="email-folder"><option value="">Loading runs…</option></select>
         </div>
         <div id="scenario-banner"></div>
@@ -193,6 +199,24 @@
       const invoices = parseInvoices(lastResult.response);
       document.getElementById('agent-raw-area').textContent = lastResult.response || '—';
 
+      // Top-right: full run JSON (email + pdfs with extract details)
+      const runSummary = {
+        runName: lastResult.runName,
+        email: lastResult.email || null,
+        agentResponse: tryParse(lastResult.response) ?? lastResult.response,
+        pdfs: pdfs.map(p => ({
+          name: p.name,
+          storageUrl: p.storageUrl,
+          proxyUrl: p.proxyUrl,
+          extract: {
+            json: tryParse(p.extractJson) ?? (p.extractJson ? '(unparsed)' : null),
+            markdown: p.extractMarkdown || null
+          }
+        }))
+      };
+      document.getElementById('detail-area').innerHTML =
+        `<pre class="code-view">${esc(JSON.stringify(runSummary, null, 2))}</pre>`;
+
       const card = document.getElementById('doc-extract-card');
       card.style.display = '';
 
@@ -200,62 +224,63 @@
       if (!pdfs.length) {
         sel.innerHTML = '<option value="">No PDFs</option>';
         document.getElementById('pdf-detail-area').innerHTML = '<div class="empty">No PDFs in this run.</div>';
-        document.getElementById('detail-area').innerHTML = '<div class="empty">No invoices extracted.</div>';
         return;
       }
 
       sel.innerHTML = pdfs.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join('');
-      sel.onchange = () => renderPdfDetail(parseInt(sel.value, 10), pdfs, invoices);
-      renderPdfDetail(0, pdfs, invoices);
+      sel.onchange = () => renderPdfDetail(parseInt(sel.value, 10), pdfs);
+      renderPdfDetail(0, pdfs);
     }
 
-    function renderInvoiceFields(inv) {
-      if (!inv) return '<div class="empty">No extracted data matched for this PDF.</div>';
-      const cats = Array.isArray(inv.categories) ? inv.categories.map(c => `
-        <div class="category-block">
-          <h3>${esc(c.categoryName)} <span style="color:var(--muted);font-weight:400;">— ${fmtMoney(c.categoryTotal, inv.currency)}</span></h3>
-          <table class="data">
-            <thead><tr><th>Description</th><th style="width:80px;">Qty</th><th style="width:110px;">Unit Price</th><th style="width:110px;">Line Total</th></tr></thead>
-            <tbody>
-              ${(c.lineItems || []).map(li => `<tr>
-                <td>${esc(li.description)}</td>
-                <td>${esc(li.quantity)}</td>
-                <td>${fmtMoney(li.unitPrice, inv.currency)}</td>
-                <td>${fmtMoney(li.lineTotal, inv.currency)}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`).join('') : '';
-      return `
-        <div class="field-grid">
-          <div class="k">Invoice ID</div><div>${esc(inv.invoiceId)}</div>
-          <div class="k">Vendor</div><div>${esc(inv.vendorName)}</div>
-          <div class="k">Invoice Date</div><div>${esc(inv.invoiceDate)}</div>
-          <div class="k">Due Date</div><div>${esc(inv.dueDate || '—')}</div>
-          <div class="k">Currency</div><div>${esc(inv.currency)}</div>
-          <div class="k">Total Amount</div><div>${fmtMoney(inv.totalAmount, inv.currency)}</div>
-        </div>
-        ${cats}`;
+    function tryParse(s) {
+      if (!s || typeof s !== 'string') return null;
+      try { return JSON.parse(s); } catch {}
+      const m = s.match(/\{[\s\S]*\}/);
+      if (m) { try { return JSON.parse(m[0]); } catch {} }
+      return null;
     }
 
-    function renderPdfDetail(idx, pdfs, invoices) {
+    function renderPdfDetail(idx, pdfs) {
       const pdf = pdfs[idx];
       const area = document.getElementById('pdf-detail-area');
       if (!pdf) { area.innerHTML = ''; return; }
-      const inv = findInvoiceForPdf(invoices, pdf.name);
+
+      // Hide PDF.js outline / sidebar via URL fragment params recognised by Chrome / Edge PDF viewers
+      const pdfSrc = `${pdf.proxyUrl}#toolbar=1&navpanes=0&pagemode=none`;
+      const jsonPretty = (() => {
+        const parsed = tryParse(pdf.extractJson);
+        if (parsed) return JSON.stringify(parsed, null, 2);
+        return pdf.extractJson || '(no JSON)';
+      })();
+      const mdText = pdf.extractMarkdown || '(no markdown)';
+
       area.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;border:1px solid var(--border);border-radius:8px;padding:14px;background:#f8fafc;">
           <div class="doc-preview" style="background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
-            <iframe src="${esc(pdf.proxyUrl)}" title="${esc(pdf.name)}" style="width:100%;height:560px;border:none;"></iframe>
+            <iframe src="${esc(pdfSrc)}" title="${esc(pdf.name)}" style="width:100%;height:620px;border:none;"></iframe>
           </div>
           <div>
             <h4 style="margin:0 0 10px;font-size:0.95rem;">📄 ${esc(pdf.name)}</h4>
-            ${renderInvoiceFields(inv)}
+            <div class="tabs">
+              <button type="button" data-tab="json" class="active">JSON</button>
+              <button type="button" data-tab="md">Markdown</button>
+            </div>
+            <div class="tab-panel active" data-panel="json">
+              <pre class="code-view">${esc(jsonPretty)}</pre>
+            </div>
+            <div class="tab-panel" data-panel="md">
+              <pre class="code-view">${esc(mdText)}</pre>
+            </div>
           </div>
         </div>`;
 
-      // also reflect the selected invoice in the top-right detail card
-      document.getElementById('detail-area').innerHTML = renderInvoiceFields(inv);
+      area.querySelectorAll('.tabs button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.dataset.tab;
+          area.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b === btn));
+          area.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
+        });
+      });
     }
 
     loadRuns();

@@ -10,14 +10,70 @@ async function loadJson(path) {
   return res.json();
 }
 
-async function loadWorkflowData() {
-  const [invoices, ledger, rules, fxRates] = await Promise.all([
-    loadJson('data/invoices.json'),
+// Loads domain data (ledger / rules / fx). Invoices are no longer mock-loaded
+// here — they come from extracted run output via loadRunInvoice().
+async function loadDomainData() {
+  const [ledger, rules, fxRates] = await Promise.all([
     loadJson('data/ledger.json'),
     loadJson('data/rules.json'),
     loadJson('data/fx-rates.json')
   ]);
-  return { invoices: invoices.invoices, ledger, rules: rules.rules, fxRates: fxRates.rates };
+  return { ledger, rules: rules.rules, fxRates: fxRates.rates };
+}
+
+// Backward-compatible alias; returns empty invoices array.
+async function loadWorkflowData() {
+  const data = await loadDomainData();
+  return { invoices: [], ...data };
+}
+
+// Fetch the list of run-xxx folders available in storage.
+async function loadRuns() {
+  const res = await fetch('/invoice/runs');
+  if (!res.ok) throw new Error(`Failed to load runs: HTTP ${res.status}`);
+  return res.json();
+}
+
+// Fetch the cached invoice JSON for a given run. Returns the parsed object
+// emitted by the invoice agent, or null if the agent hasn't run yet.
+async function loadRunInvoice(runName) {
+  const res = await fetch(`/invoice/runs/${encodeURIComponent(runName)}/invoice`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Failed to load invoice for ${runName}: HTTP ${res.status}`);
+  return res.json();
+}
+
+// Normalise an invoice agent payload into an array of invoice objects.
+function extractInvoiceArray(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.invoices)) return payload.invoices;
+  if (payload.invoiceId) return [payload];
+  return [];
+}
+
+// Populate a <select> element with the list of available runs.
+async function populateRunSelect(selectId, { autoSelectFirst = true } = {}) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return [];
+  sel.innerHTML = '<option value="">Loading runs…</option>';
+  try {
+    const runs = await loadRuns();
+    if (!runs.length) {
+      sel.innerHTML = '<option value="">No runs in storage</option>';
+      return [];
+    }
+    sel.innerHTML = '<option value="">— Select a run —</option>' +
+      runs.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+    if (autoSelectFirst && runs.length) {
+      sel.value = runs[0];
+      sel.dispatchEvent(new Event('change'));
+    }
+    return runs;
+  } catch (err) {
+    sel.innerHTML = `<option value="">Error: ${esc(err.message)}</option>`;
+    return [];
+  }
 }
 
 function fmtMoney(amount, currency) {
