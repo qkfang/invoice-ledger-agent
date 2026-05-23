@@ -27,8 +27,10 @@ public class FabricLakehouseService
         var tokenContext = new TokenRequestContext(["https://storage.azure.com/.default"]);
         var token = await _credential.GetTokenAsync(tokenContext, CancellationToken.None);
 
-        var escapedFile = Uri.EscapeDataString(fileName);
-        var baseUrl = $"https://onelake.dfs.fabric.microsoft.com/{Uri.EscapeDataString(_workspaceId)}/{Uri.EscapeDataString(_lakehouseId)}/Files/invoices/{escapedFile}";
+        // Preserve folder separators by escaping each path segment individually.
+        var escapedPath = string.Join('/', fileName.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(Uri.EscapeDataString));
+        var baseUrl = $"https://onelake.dfs.fabric.microsoft.com/{Uri.EscapeDataString(_workspaceId)}/{Uri.EscapeDataString(_lakehouseId)}/Files/invoices/{escapedPath}";
 
         var http = _httpClientFactory.CreateClient();
 

@@ -376,8 +376,8 @@ public static class Endpoints
                         extractJson = result.Json;
                         extractMarkdown = result.Markdown;
                         var baseName = Path.GetFileNameWithoutExtension(name);
-                        await localRunStorage.WriteAllTextAsync(safeRun, $"{baseName}.extract.json", extractJson ?? string.Empty);
-                        await localRunStorage.WriteAllTextAsync(safeRun, $"{baseName}.extract.md", extractMarkdown ?? string.Empty);
+                        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, $"{baseName}.extract.json", extractJson ?? string.Empty);
+                        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, $"{baseName}.extract.md", extractMarkdown ?? string.Empty);
                     }
                 }
                 catch (Exception ex)
@@ -417,7 +417,7 @@ public static class Endpoints
                 {
                     using var doc = JsonDocument.Parse(match.Value);
                     var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
-                    await localRunStorage.WriteAllTextAsync(safeRun, "invoice.json", pretty);
+                    await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "invoice.json", pretty);
                 }
                 catch (JsonException) { /* ignore parse failures */ }
             }
@@ -494,16 +494,16 @@ public static class Endpoints
                     {
                         using var doc = JsonDocument.Parse(match.Value);
                         var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
-                        await localRunStorage.WriteAllTextAsync(safeRun, "processing.json", pretty);
+                        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "processing.json", pretty);
                     }
                     catch (JsonException) { /* leave previous processing.json untouched on parse failure */ }
                 }
 
                 // Persist raw agent input/output so the processing page can reload them.
                 var ioOpts = new JsonSerializerOptions { WriteIndented = true };
-                await localRunStorage.WriteAllTextAsync(safeRun, "processing-agentinput.json",
+                await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "processing-agentinput.json",
                     JsonSerializer.Serialize(new { input }, ioOpts));
-                await localRunStorage.WriteAllTextAsync(safeRun, "processing-agentoutput.json",
+                await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "processing-agentoutput.json",
                     JsonSerializer.Serialize(new { output = response }, ioOpts));
             }
 
@@ -526,7 +526,7 @@ public static class Endpoints
 
             logger.LogInformation("Exception draft request ({Length} chars)", request.Json.Length);
             var response = await exceptionAgent.RunAsync(request.Json);
-            await CacheAgentResultAsync(localRunStorage, request.RunName, "exception.json", request.Json, response);
+            await CacheAgentResultAsync(localRunStorage, blobStorage, fabricLakehouse, logger, request.RunName, "exception.json", request.Json, response);
             return Results.Ok(new { response });
         });
 
@@ -650,15 +650,12 @@ public static class Endpoints
             try { emailObj = JsonSerializer.Deserialize<JsonElement>(emailJson); }
             catch { return Results.BadRequest(new { error = "Invalid ingestion.json" }); }
 
-            var dt = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-            var runName = $"run-{dt}";
-            var runDir = localRunStorage.EnsureRunDir(runName);
+            var runDt = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var runName = $"run-{runDt}";
+            localRunStorage.EnsureRunDir(runName);
 
-            // Save ingestion.json to local temp first (primary store).
-            await localRunStorage.WriteAllTextAsync(runName, "ingestion.json", emailJson);
-            // Then mirror to remote storage account (secondary).
-            using (var emailMs = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(emailJson)))
-                await blobStorage.UploadAsync(emailMs, $"{runName}/ingestion.json");
+            // Save ingestion.json to local temp, storage account, and Fabric Lakehouse.
+            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "ingestion.json", emailJson);
 
             var pdfFileNames = new List<string>();
             if (emailObj.TryGetProperty("attachments", out var attachments))
@@ -697,9 +694,26 @@ public static class Endpoints
                 savedFiles.Add(pdfName);
 
                 // Then upload to remote storage (secondary).
-                using var stream = File.OpenRead(scenarioPdfPath);
-                var blobUrl = await blobStorage.UploadAsync(stream, $"{runName}/{pdfName}");
-                blobUrls[pdfName] = blobUrl.ToString();
+                using (var stream = File.OpenRead(scenarioPdfPath))
+                {
+                    var blobUrl = await blobStorage.UploadAsync(stream, $"{runName}/{pdfName}");
+                    blobUrls[pdfName] = blobUrl.ToString();
+                }
+
+                // Finally upload to Fabric Lakehouse (tertiary).
+                if (fabricLakehouse is not null)
+                {
+                    try
+                    {
+                        var fi = new FileInfo(scenarioPdfPath);
+                        using var fabricStream = File.OpenRead(scenarioPdfPath);
+                        await fabricLakehouse.UploadAsync(fabricStream, $"{runName}/{pdfName}", fi.Length);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Fabric upload failed for {File}", Sanitize(pdfName));
+                    }
+                }
             }
 
             var urlList = string.Join("\n", blobUrls.Select(kv => $"- {kv.Key}: {kv.Value}"));
@@ -723,7 +737,7 @@ public static class Endpoints
                     processedAt = DateTime.UtcNow.ToString("o")
                 }, new JsonSerializerOptions { WriteIndented = true });
 
-                await File.WriteAllTextAsync(Path.Combine(runDir, extractedFileName), extractedContent);
+                await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, extractedFileName, extractedContent);
                 extractedFiles.Add(extractedFileName);
                 savedFiles.Add(extractedFileName);
 
@@ -801,6 +815,44 @@ public static class Endpoints
     private static string Sanitize(string value) =>
         value.Replace('\r', ' ').Replace('\n', ' ');
 
+    private static async Task MirrorRunFileAsync(LocalRunStorageService localRunStorage,
+        BlobStorageService blobStorage, FabricLakehouseService? fabricLakehouse, ILogger logger,
+        string runName, string fileName, string content)
+    {
+        var safeRun = Path.GetFileName(runName);
+        if (string.IsNullOrEmpty(safeRun)) return;
+
+        // Local temp first (primary).
+        await localRunStorage.WriteAllTextAsync(safeRun, fileName, content);
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+
+        // Storage account (secondary).
+        try
+        {
+            using var ms = new MemoryStream(bytes);
+            await blobStorage.UploadAsync(ms, $"{safeRun}/{fileName}");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Blob mirror failed for {Run}/{File}", Sanitize(safeRun), Sanitize(fileName));
+        }
+
+        // Fabric Lakehouse (tertiary).
+        if (fabricLakehouse is not null)
+        {
+            try
+            {
+                using var ms = new MemoryStream(bytes);
+                await fabricLakehouse.UploadAsync(ms, $"{safeRun}/{fileName}", bytes.Length);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Fabric mirror failed for {Run}/{File}", Sanitize(safeRun), Sanitize(fileName));
+            }
+        }
+    }
+
     private static async Task CacheAgentResultAsync(LocalRunStorageService storage, string? runName, string fileName, string input, string? response)
     {
         if (string.IsNullOrWhiteSpace(runName)) return;
@@ -809,6 +861,16 @@ public static class Endpoints
         var payload = new { input, response, cachedAt = DateTime.UtcNow.ToString("o") };
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
         await storage.WriteAllTextAsync(safeRun, fileName, json);
+    }
+
+    private static async Task CacheAgentResultAsync(LocalRunStorageService storage,
+        BlobStorageService blobStorage, FabricLakehouseService? fabricLakehouse, ILogger logger,
+        string? runName, string fileName, string input, string? response)
+    {
+        if (string.IsNullOrWhiteSpace(runName)) return;
+        var payload = new { input, response, cachedAt = DateTime.UtcNow.ToString("o") };
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+        await MirrorRunFileAsync(storage, blobStorage, fabricLakehouse, logger, runName, fileName, json);
     }
 
     private static async Task<IResult> ReadCachedRunResultAsync(LocalRunStorageService storage, string runName, string fileName)

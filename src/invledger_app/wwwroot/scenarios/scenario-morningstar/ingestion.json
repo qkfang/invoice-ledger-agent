@@ -1,12 +1,12 @@
 {
   "id": 5,
-  "from": "billing@morningstar.com",
-  "fromName": "Morningstar, Inc.",
+  "from": "remittances.au@morningstar.com",
+  "fromName": "Morningstar Australasia Pty Limited",
   "to": "ap@company.com",
-  "subject": "Invoice INV-2026-0005 – May Morningstar Research & Data Subscriptions",
+  "subject": "Tax Invoice INV-2026-0005 – AdviserLogic & Licensee Solutions (May 2026)",
   "date": "2026-05-17",
-  "preview": "Attached is your May invoice for Morningstar Direct, Advisor Workstation, and related data services.",
-  "body": "Dear Accounts Payable Team,\n\nPlease find attached invoice #INV-2026-0005 for Morningstar research platforms, advisor tools, ESG data, and PitchBook platform access for the May 2026 billing cycle.\n\nTotal Amount: USD 31,156.13\nDue Date: June 16, 2026\nPayment Terms: Net 30\n\nKindly process payment by the due date. Reference invoice number on remittance. Contact billing@morningstar.com for any questions.\n\nThank you,\nMorningstar, Inc. – Accounts Receivable",
+  "preview": "Attached is your May tax invoice for AdviserLogic, Licensee Solutions, and Morningstar research/data services.",
+  "body": "Dear Accounts Payable Team,\n\nPlease find attached tax invoice #INV-2026-0005 for AdviserLogic practice management, Licensee Solutions compliance services, and Morningstar Australian research and data feeds for the May 2026 service period.\n\nCustomer Number: C-0044219\nContract Number: MS-AU-778421\nContract Term: 01-Jul-2025 to 30-Jun-2026\nTotal Amount: AUD 11,748.00 (incl. GST 10%)\nDue Date: June 16, 2026\nPayment Terms: Net 30\n\nPlease reference the invoice and customer number with payment. Submit remittance details to remittances.au@morningstar.com or fax +61 2 9276 4545. Questions? Call +61 2 9276 4444.\n\nThank you,\nMorningstar Australasia Pty Limited – Accounts Receivable",
   "attachments": [
     { "name": "morningstar-may.pdf", "invoiceId": "INV-2026-0005" }
   ]

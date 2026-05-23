@@ -39,33 +39,38 @@ var bloomberg = new Invoice
 
 var morningstar = new Invoice
 {
-    VendorName = "Morningstar, Inc.",
-    VendorAddress = new[] { "22 West Washington Street", "Chicago, IL 60602", "United States", "Tax ID: 36-3297908" },
-    VendorContact = "billing@morningstar.com  |  +1 312-696-6000",
+    VendorName = "Morningstar Australasia Pty Limited",
+    VendorAddress = new[] { "Level 3, International Tower 1", "100 Barangaroo Avenue", "Sydney NSW 2000", "Australia", "ABN 95 090 665 544" },
+    VendorContact = "remittances.au@morningstar.com  |  +61 2 9276 4444",
     BillToName = "Accounts Payable",
-    BillToAddress = new[] { "Finance Department", "100 Corporate Drive", "Suite 400", "Chicago, IL 60601" },
+    BillToAddress = new[] { "Finance Department", "Level 12, 350 Collins Street", "Melbourne VIC 3000", "Australia" },
+    ShipToName = "Accounts Payable",
+    ShipToAddress = new[] { "Finance Department", "Level 12, 350 Collins Street", "Melbourne VIC 3000", "Australia" },
     InvoiceNumber = "INV-2026-0005",
     InvoiceDate = "May 17, 2026",
     DueDate = "June 16, 2026",
-    ServicePeriod = "May 1 – May 31, 2026",
+    ServicePeriod = "01-May-2026 to 31-May-2026",
+    ContractNumber = "MS-AU-778421",
+    ContractTerm = "01-Jul-2025 to 30-Jun-2026",
+    CustomerNumber = "C-0044219",
     PoNumber = "PO-2026-0418",
     Terms = "Net 30",
-    Currency = "USD",
+    Currency = "AUD",
     Lines = new()
     {
-        new("MS-DIRECT",       "Morningstar Direct – Annual License (May allocation)", 1, 8400.00m, "month"),
-        new("MS-AWS-10",       "Advisor Workstation – Professional",                 10,  350.00m, "advisor/month"),
-        new("MS-OFFICE-CLD",   "Morningstar Office Cloud",                            5,  400.00m, "user/month"),
-        new("MS-BAA",          "ByAllAccounts – Data Aggregation Service",            1, 1800.00m, "month"),
-        new("MS-SUSTAIN-ESG",  "Sustainalytics ESG Risk Ratings Data Feed",           1, 4500.00m, "month"),
-        new("MS-EQRES-PREM",   "Equity Research Reports – Premium",                   1, 1650.00m, "month"),
-        new("MS-PB-SEAT",      "PitchBook Platform Access",                           3, 1800.00m, "seat/month"),
-        new("MS-IDX-US",       "Morningstar Indexes Data License – US Market",        1, 1200.00m, "month"),
-        new("MS-SUPPORT",      "Premium Support",                                     1,  600.00m, "month"),
+        new("ALG-PMP-15",  "AdviserLogic – Practice Management Platform (15 advisers)", 15, 150.00m, "adviser/mo"),
+        new("ALG-DOCV",    "AdviserLogic – Document Vault Add-on",                       1, 480.00m, "month"),
+        new("ALG-SOA",     "AdviserLogic – Statement of Advice Generator",               1, 620.00m, "month"),
+        new("LIC-COMP",    "Licensee Solutions – Compliance Monitoring",                 1,1850.00m, "month"),
+        new("LIC-APL",     "Licensee Solutions – Approved Product List Management",      1, 950.00m, "month"),
+        new("LIC-AUDIT",   "Licensee Solutions – Adviser Audit Service",                 5, 220.00m, "audit"),
+        new("MS-RES-AUEQ", "Morningstar Research – Australian Equities Coverage",        1,1400.00m, "month"),
+        new("MS-DATA-MF",  "Morningstar Data – Managed Funds Performance Feed (AU)",     1,1650.00m, "month"),
+        new("MS-SUPPORT",  "Premium Support & SLA",                                      1, 380.00m, "month"),
     },
-    TaxLabel = "Sales Tax (IL 7.25%)",
-    TaxRate = 0.0725m,
-    Notes = "Remit to: JPMorgan Chase Bank, N.A. | ABA 021000021 | Account 887761234 | SWIFT CHASUS33\nPlease reference invoice number on payment. Questions: ar@morningstar.com."
+    TaxLabel = "GST 10%",
+    TaxRate = 0.10m,
+    Notes = "Bank Transfer\nBank: Bank of America\nBranch: BOA Sydney, AU\nLevel 38, Governor Phillip Tower, 1 Farrer Place, Sydney NSW 2000, Australia\nAccount Name: Morningstar Australasia Pty Limited\nAccount Number: 704331482\nBSB: 232001\nSWIFT Code: BOFAAUSX\n\nPlease reference invoice and customer number with payment. To ensure your payment reaches your account, please submit your remittance details by email to remittances.au@morningstar.com or by Fax: +61 2 9276 4545. Questions? Call +61 2 9276 4444."
 };
 
 var factset = new Invoice
@@ -100,7 +105,7 @@ var factset = new Invoice
 };
 
 InvoicePdf.Render(bloomberg).GeneratePdf(Path.Combine(outDir, "scenarios", "scenario-bloomberg", "bloomberg-may.pdf"));
-InvoicePdf.Render(morningstar).GeneratePdf(Path.Combine(outDir, "scenarios", "scenario-morningstar", "morningstar-may.pdf"));
+MorningstarPdf.Render(morningstar).GeneratePdf(Path.Combine(outDir, "scenarios", "scenario-morningstar", "morningstar-may.pdf"));
 InvoicePdf.Render(factset).GeneratePdf(Path.Combine(outDir, "scenarios", "scenario-factset", "factset-may.pdf"));
 
 File.Copy(Path.Combine(outDir, "scenarios", "scenario-bloomberg",   "bloomberg-may.pdf"),   Path.Combine(outDir, "invoices", "bloomberg-may.pdf"),   true);
@@ -128,10 +133,15 @@ class Invoice
     public string VendorContact { get; set; } = "";
     public string BillToName { get; set; } = "";
     public string[] BillToAddress { get; set; } = Array.Empty<string>();
+    public string ShipToName { get; set; } = "";
+    public string[] ShipToAddress { get; set; } = Array.Empty<string>();
     public string InvoiceNumber { get; set; } = "";
     public string InvoiceDate { get; set; } = "";
     public string DueDate { get; set; } = "";
     public string ServicePeriod { get; set; } = "";
+    public string ContractNumber { get; set; } = "";
+    public string ContractTerm { get; set; } = "";
+    public string CustomerNumber { get; set; } = "";
     public string PoNumber { get; set; } = "";
     public string Terms { get; set; } = "";
     public string Currency { get; set; } = "USD";
@@ -281,6 +291,169 @@ static class InvoicePdf
             // Notes
             col.Item().PaddingTop(18).Text("Payment Instructions").Bold().FontSize(9).FontColor(Colors.Grey.Darken3);
             col.Item().PaddingTop(2).Text(inv.Notes).FontSize(8).FontColor(Colors.Grey.Darken2);
+        });
+    }
+}
+
+static class MorningstarPdf
+{
+    // Salmon/pink highlights used in the reference invoice layout.
+    const string Pink = "#F4C8C0";
+    const string PinkLight = "#F9DDD7";
+    const string Red = "#E5202E";
+    const string TextDark = "#1F1F1F";
+    const string TextMuted = "#5C5C5C";
+
+    public static Document Render(Invoice inv) => Document.Create(c =>
+    {
+        c.Page(p =>
+        {
+            p.Size(PageSizes.A4);
+            p.Margin(32);
+            p.DefaultTextStyle(t => t.FontSize(9).FontFamily("Helvetica").FontColor(TextDark));
+
+            p.Header().Element(h => Header(h, inv));
+            p.Content().PaddingVertical(10).Element(co => Content(co, inv));
+        });
+    });
+
+    static void Header(QuestPDF.Infrastructure.IContainer h, Invoice inv)
+    {
+        h.Row(r =>
+        {
+            r.RelativeItem().Column(col =>
+            {
+                col.Item().Text("MORNINGSTAR").FontSize(20).Bold().FontColor(Red).LetterSpacing(0.05f);
+                col.Item().PaddingTop(1).Text(inv.VendorName).FontSize(8).FontColor(TextMuted);
+            });
+            r.RelativeItem().AlignCenter().PaddingTop(4).Text("Tax Invoice").FontSize(14).Bold();
+            r.RelativeItem().AlignRight().PaddingTop(6).Text("Page 1 of 1").FontSize(8).FontColor(TextMuted);
+        });
+    }
+
+    static void LabelBox(QuestPDF.Infrastructure.IContainer cell, string label, string value)
+    {
+        cell.Background(Pink).Padding(6).Column(c =>
+        {
+            c.Item().Text(label).Bold().FontSize(8);
+            c.Item().PaddingTop(2).Text(value).FontSize(9);
+        });
+    }
+
+    static void Content(QuestPDF.Infrastructure.IContainer co, Invoice inv)
+    {
+        co.Column(col =>
+        {
+            // Top meta row: Customer Number | Contract Number / Term | Invoice Number / Date
+            col.Item().PaddingTop(8).Row(r =>
+            {
+                r.RelativeItem().Element(c => LabelBox(c, "Customer Number", inv.CustomerNumber));
+                r.ConstantItem(8);
+                r.RelativeItem().Column(c =>
+                {
+                    c.Item().Element(x => LabelBox(x, "Contract Number", inv.ContractNumber));
+                    c.Item().PaddingTop(4).Element(x => LabelBox(x, "Contract Term", inv.ContractTerm));
+                });
+                r.ConstantItem(8);
+                r.RelativeItem().Column(c =>
+                {
+                    c.Item().Element(x => LabelBox(x, "Invoice Number", inv.InvoiceNumber));
+                    c.Item().PaddingTop(4).Element(x => LabelBox(x, "Invoice Date", inv.InvoiceDate));
+                });
+            });
+
+            col.Item().PaddingTop(6).LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten1);
+
+            // Bill to / Ship to
+            col.Item().PaddingTop(10).Row(r =>
+            {
+                r.RelativeItem().Background(Pink).Padding(6).Column(c =>
+                {
+                    c.Item().Text("Bill to").Bold().FontSize(9);
+                    c.Item().PaddingTop(2).Text(inv.BillToName).FontSize(8);
+                    foreach (var l in inv.BillToAddress) c.Item().Text(l).FontSize(8);
+                });
+                r.ConstantItem(12);
+                r.RelativeItem().Background(Pink).Padding(6).Column(c =>
+                {
+                    c.Item().Text("Ship to").Bold().FontSize(9);
+                    c.Item().PaddingTop(2).Text(inv.ShipToName).FontSize(8);
+                    foreach (var l in inv.ShipToAddress) c.Item().Text(l).FontSize(8);
+                });
+            });
+
+            // Line items: Description | Morningstar ID | Amount | Tax | Total
+            col.Item().PaddingTop(18).Table(t =>
+            {
+                t.ColumnsDefinition(cd =>
+                {
+                    cd.RelativeColumn(5);
+                    cd.ConstantColumn(90);
+                    cd.ConstantColumn(70);
+                    cd.ConstantColumn(50);
+                    cd.ConstantColumn(75);
+                });
+                t.Header(h =>
+                {
+                    h.Cell().Background(Pink).Padding(6).Text("Description").Bold().FontSize(9);
+                    h.Cell().Background(PinkLight).Padding(6).Text("Morningstar ID").Bold().FontSize(9);
+                    h.Cell().Background(PinkLight).Padding(6).AlignRight().Text("Amount").Bold().FontSize(9);
+                    h.Cell().Background(PinkLight).Padding(6).AlignRight().Text("Tax").Bold().FontSize(9);
+                    h.Cell().Background(PinkLight).Padding(6).AlignRight().Text("Total").Bold().FontSize(9);
+                });
+
+                foreach (var line in inv.Lines)
+                {
+                    var taxAmt = Math.Round(line.Total * inv.TaxRate, 2);
+                    var total = line.Total + taxAmt;
+                    t.Cell().Padding(6).Column(c =>
+                    {
+                        c.Item().Text(line.Description).FontSize(9);
+                        c.Item().Text(inv.ServicePeriod).FontSize(8).FontColor(TextMuted);
+                    });
+                    t.Cell().Padding(6).Text(line.Sku).FontSize(9);
+                    t.Cell().Padding(6).AlignRight().Text(line.Total.ToString("N2")).FontSize(9);
+                    t.Cell().Padding(6).AlignRight().Text($"{inv.TaxRate * 100:0}%").FontSize(9);
+                    t.Cell().Padding(6).AlignRight().Text(total.ToString("N2")).FontSize(9);
+                }
+            });
+
+            col.Item().PaddingTop(14).LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten1);
+
+            // Totals block
+            col.Item().PaddingTop(10).Background(PinkLight).Padding(8).Table(t =>
+            {
+                t.ColumnsDefinition(cd =>
+                {
+                    cd.RelativeColumn(4);
+                    cd.ConstantColumn(60);
+                    cd.ConstantColumn(80);
+                    cd.ConstantColumn(80);
+                    cd.ConstantColumn(90);
+                });
+                void Span(string label, string? a = null, string? b = null, string? c = null, string? d = null, bool bold = false)
+                {
+                    var l = t.Cell().PaddingVertical(2).Text(label).FontSize(9);
+                    if (bold) l.Bold();
+                    void Val(string? v)
+                    {
+                        var cell = t.Cell().PaddingVertical(2).AlignRight().Text(v ?? "").FontSize(9);
+                        if (bold) cell.Bold();
+                    }
+                    Val(a); Val(b); Val(c); Val(d);
+                }
+                t.Cell().ColumnSpan(5).Text("Contracted Currency").Bold().FontSize(9);
+                Span($"Invoice Total ({inv.TaxLabel})", null, inv.Subtotal.ToString("N2"), inv.TaxAmount.ToString("N2"), inv.GrandTotal.ToString("N2"));
+                Span("Payments", null, null, null, "0.00");
+                Span("Credits/Adjustments", null, null, null, "0.00");
+                Span("Balance Due", inv.Currency, null, null, inv.GrandTotal.ToString("N2"), bold: true);
+                Span("Terms of Payment", null, null, null, inv.Terms.ToUpper());
+                Span("Due Date", null, null, null, inv.DueDate, bold: true);
+            });
+
+            // Bank transfer / notes
+            col.Item().PaddingTop(12).Text("Bank Transfer").Bold().FontSize(9);
+            col.Item().PaddingTop(2).Text(inv.Notes).FontSize(8).FontColor(TextMuted);
         });
     }
 }
