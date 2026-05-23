@@ -37,16 +37,22 @@
       <button id="btn-run" disabled>Run Processing Agent</button>
     </div>
 
-    <div class="card" id="io-card" style="display:none;">
-      <h2>Agent Input</h2>
-      <div id="input-area" class="io-box"></div>
-      <h2 style="margin-top:16px;">Agent Output</h2>
-      <div id="output-area" class="io-box"></div>
-    </div>
-
     <div class="card">
       <h2>Result</h2>
-      <div id="result-area"><div class="empty">Run processing to see results.</div></div>
+      <div class="tabs">
+        <button class="tab active" data-tab="result">Result</button>
+        <button class="tab" data-tab="input">Agent Input</button>
+        <button class="tab" data-tab="output">Agent Output</button>
+      </div>
+      <div class="tab-panel active" data-panel="result">
+        <div id="result-area"><div class="empty">Run processing to see results.</div></div>
+      </div>
+      <div class="tab-panel" data-panel="input">
+        <div id="input-area" class="io-box"><div class="empty">No agent input yet.</div></div>
+      </div>
+      <div class="tab-panel" data-panel="output">
+        <div id="output-area" class="io-box"><div class="empty">No agent output yet.</div></div>
+      </div>
     </div>
   </main>
 
@@ -57,12 +63,60 @@
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-processing']);
     renderEmailFolderBanner('email-folder-banner');
 
+    document.querySelectorAll('.tabs .tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.tab;
+        document.querySelectorAll('.tabs .tab').forEach(t => t.classList.toggle('active', t === btn));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === target));
+      });
+    });
+
     let invoices = [];
+    let currentRunName = null;
 
     function setRunLoading(loading) {
       const b = document.getElementById('btn-run');
       b.disabled = loading;
       b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Run Processing Agent';
+    }
+
+    function renderCachedRun(cached) {
+      // processing.json now holds the parsed agent JSON directly (no input/response wrapper).
+      const list = Array.isArray(cached?.invoices) ? cached.invoices
+                 : Array.isArray(cached) ? cached
+                 : (cached && cached.invoiceId ? [cached] : null);
+      if (list) {
+        document.getElementById('result-area').innerHTML =
+          list.map(renderResultHtml).join('<hr style="margin:18px 0;border:none;border-top:1px solid var(--border);" />');
+      } else {
+        document.getElementById('result-area').innerHTML = `<pre>${esc(JSON.stringify(cached, null, 2))}</pre>`;
+      }
+    }
+
+    function renderItemsTable(items, currency) {
+      if (!items || !items.length) return '<div class="empty">None.</div>';
+      const rows = items.map(r => `
+        <tr>
+          <td>${esc(r.lineItem)}</td>
+          <td>${esc(r.lineItemCategory)}</td>
+          <td>${esc(r.lineItemDescription)}</td>
+          <td>${esc(r.businessName)}</td>
+          <td>${r.quantity != null ? r.quantity : '—'}</td>
+          <td>${r.unitPrice != null ? fmtMoney(r.unitPrice, currency) : '—'}</td>
+          <td>${r.lineTotal != null ? fmtMoney(r.lineTotal, currency) : '—'}</td>
+          <td>${esc(r.status || '')}</td>
+          <td><span class="rule-pill">${esc(r.ruleApplied || '')}</span></td>
+          <td style="color:var(--muted);">${esc(r.reason || '')}</td>
+        </tr>`).join('');
+      return `
+        <table class="data">
+          <thead><tr>
+            <th>Line Item</th><th>Category</th><th>Description</th><th>Business</th>
+            <th>Qty</th><th>Unit Price</th><th>Line Total</th>
+            <th>Status</th><th>Rule</th><th>Reason</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
     }
 
     function renderResultHtml(result) {
@@ -74,29 +128,17 @@
           <div class="summary-pill"><div class="n">${fmtMoney(result.originalInvoiceAmount, result.originalInvoiceCurrency)}</div><div class="l">Original Amount</div></div>
           <div class="summary-pill"><div class="n">${esc(result.exchangeRate)}</div><div class="l">Exchange Rate</div></div>
           <div class="summary-pill"><div class="n">${fmtMoney(result.convertedInvoiceAmount, 'AUD')}</div><div class="l">Converted (AUD)</div></div>
+          <div class="summary-pill"><div class="n">${(result.lineItems || []).length}</div><div class="l">Processable</div></div>
+          <div class="summary-pill"><div class="n">${(result.exceptions || []).length}</div><div class="l">Exceptions</div></div>
         </div>`;
-
-      const rows = (result.lineItems || []).map(r => `
-        <tr>
-          <td>${esc(r.lineItem)}</td>
-          <td>${esc(r.lineItemCategory)}</td>
-          <td>${esc(r.lineItemDescription)}</td>
-          <td>${esc(r.businessName)}</td>
-          <td>${r.quantity != null ? r.quantity : '—'}</td>
-          <td>${r.unitPrice != null ? fmtMoney(r.unitPrice, result.originalInvoiceCurrency) : '—'}</td>
-          <td>${r.lineTotal != null ? fmtMoney(r.lineTotal, result.originalInvoiceCurrency) : '—'}</td>
-        </tr>`).join('');
 
       return `
         <h3 style="margin:4px 0 8px;font-size:0.95rem;">${esc(result.invoiceId || '')}</h3>
         ${header}
-        <table class="data">
-          <thead><tr>
-            <th>Line Item</th><th>Category</th><th>Description</th><th>Business</th>
-            <th>Qty</th><th>Unit Price</th><th>Line Total</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
+        <h4 style="margin:14px 0 6px;font-size:0.85rem;">Processable line items</h4>
+        ${renderItemsTable(result.lineItems, result.originalInvoiceCurrency)}
+        <h4 style="margin:14px 0 6px;font-size:0.85rem;">Exceptions</h4>
+        ${renderItemsTable(result.exceptions, result.originalInvoiceCurrency)}`;
     }
 
     function parseAgentJson(text) {
@@ -109,22 +151,19 @@
       if (!invoices.length) return;
       setRunLoading(true);
       document.getElementById('result-area').innerHTML = '<div class="empty">Running agent...</div>';
-      const ioCard = document.getElementById('io-card');
-      ioCard.style.display = 'none';
+      document.getElementById('input-area').innerHTML = '<div class="empty">No agent input yet.</div>';
+      document.getElementById('output-area').innerHTML = '<div class="empty">No agent output yet.</div>';
       try {
         const res = await fetch('/processing/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json: JSON.stringify({ invoices }, null, 2) })
+          body: JSON.stringify({ json: JSON.stringify(invoices, null, 2), runName: currentRunName })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
 
-        if (data.input || data.response) {
-          document.getElementById('input-area').textContent = data.input || '';
-          document.getElementById('output-area').textContent = data.response || '';
-          ioCard.style.display = 'block';
-        }
+        if (data.input) document.getElementById('input-area').textContent = data.input;
+        if (data.response) document.getElementById('output-area').textContent = data.response;
 
         const result = parseAgentJson(data.response);
         if (result) {
@@ -149,9 +188,11 @@
 
       runSel.addEventListener('change', async () => {
         const runName = runSel.value;
+        currentRunName = runName || null;
         invoices = [];
         document.getElementById('result-area').innerHTML = '<div class="empty">Run processing to see results.</div>';
-        document.getElementById('io-card').style.display = 'none';
+        document.getElementById('input-area').innerHTML = '<div class="empty">No agent input yet.</div>';
+        document.getElementById('output-area').innerHTML = '<div class="empty">No agent output yet.</div>';
         if (!runName) {
           summary.textContent = '';
           document.getElementById('btn-run').disabled = true;
@@ -168,6 +209,28 @@
           invoices = extractInvoiceArray(payload);
           summary.textContent = `Loaded ${invoices.length} invoice(s) from ${runName}.`;
           document.getElementById('btn-run').disabled = invoices.length === 0;
+
+          // Load cached processing result if available.
+          const cachedRes = await fetch(`/processing/runs/${encodeURIComponent(runName)}`);
+          if (cachedRes.ok) {
+            const cached = await cachedRes.json();
+            renderCachedRun(cached);
+            summary.textContent += ' Cached result loaded — click Run to overwrite.';
+          }
+
+          // Load cached agent input/output if available.
+          const [inRes, outRes] = await Promise.all([
+            fetch(`/processing/runs/${encodeURIComponent(runName)}/agentinput`),
+            fetch(`/processing/runs/${encodeURIComponent(runName)}/agentoutput`)
+          ]);
+          if (inRes.ok) {
+            const j = await inRes.json();
+            if (j && typeof j.input === 'string') document.getElementById('input-area').textContent = j.input;
+          }
+          if (outRes.ok) {
+            const j = await outRes.json();
+            if (j && typeof j.output === 'string') document.getElementById('output-area').textContent = j.output;
+          }
         } catch (err) {
           summary.innerHTML = `<span class="error">Error: ${esc(err.message)}</span>`;
           document.getElementById('btn-run').disabled = true;

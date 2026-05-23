@@ -184,6 +184,24 @@
       const action = document.getElementById('process-action-area');
       action.innerHTML = `<button class="btn-process" id="btn-process-email">⚙ Process Selected Email</button>`;
       document.getElementById('btn-process-email').addEventListener('click', processSelectedScenario);
+
+      // Try to load cached result for this scenario.
+      const resultCard = document.getElementById('process-result-card');
+      const resultArea = document.getElementById('process-result-area');
+      resultCard.style.display = 'none';
+      resultArea.innerHTML = '';
+      fetch(`/ingestion/scenarios/${encodeURIComponent(scenario.name)}/result`)
+        .then(r => r.ok ? r.json() : null)
+        .then(cached => {
+          if (!cached || currentScenario !== scenario) return;
+          resultCard.style.display = '';
+          renderProcessResult(cached);
+          const banner = document.createElement('div');
+          banner.style.cssText = 'font-size:0.78rem;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:6px 10px;margin-bottom:10px;';
+          banner.textContent = 'Cached result loaded — click Process Selected Email to overwrite.';
+          resultArea.prepend(banner);
+        })
+        .catch(() => {});
     }
 
     async function processSelectedScenario() {

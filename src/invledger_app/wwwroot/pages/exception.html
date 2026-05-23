@@ -46,6 +46,7 @@
     renderEmailFolderBanner('email-folder-banner');
 
     let allExceptions = [];
+    let currentRunName = null;
 
     function setDraftLoading(loading) {
       const b = document.getElementById('btn-draft');
@@ -86,7 +87,7 @@
         const res = await fetch('/exception/draft', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json: message })
+          body: JSON.stringify({ json: message, runName: currentRunName })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -118,40 +119,53 @@
     (async () => {
       const runSel = document.getElementById('run-select');
       const summary = document.getElementById('run-summary');
-      let ledger = null, rules = null;
-      try {
-        const domain = await loadDomainData();
-        ledger = domain.ledger;
-        rules = domain.rules;
-      } catch (err) {
-        document.getElementById('exc-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
-        return;
-      }
 
       runSel.addEventListener('change', async () => {
         const runName = runSel.value;
+        currentRunName = runName || null;
         allExceptions = [];
+        document.getElementById('draft-area').innerHTML = '<div class="empty">Click "Draft notifications" to generate emails.</div>';
         if (!runName) {
           summary.textContent = '';
           document.getElementById('exc-area').innerHTML = '<div class="empty">Select a run to view exceptions.</div>';
           return;
         }
-        summary.textContent = 'Loading invoice…';
+        summary.textContent = 'Loading processing result…';
         document.getElementById('exc-area').innerHTML = '<div class="empty">Loading…</div>';
         try {
-          const payload = await loadRunInvoice(runName);
-          if (!payload) {
-            summary.innerHTML = `<span class="error">No extracted invoice for <strong>${esc(runName)}</strong>. Run the invoice agent on the Invoice tab first.</span>`;
-            document.getElementById('exc-area').innerHTML = '<div class="empty">No invoice available.</div>';
+          const res = await fetch(`/processing/runs/${encodeURIComponent(runName)}`);
+          if (res.status === 404) {
+            summary.innerHTML = `<span class="error">No processing.json for <strong>${esc(runName)}</strong>. Run the processing agent on the Processing tab first.</span>`;
+            document.getElementById('exc-area').innerHTML = '<div class="empty">No processing result available.</div>';
             return;
           }
-          const invoices = extractInvoiceArray(payload);
-          for (const inv of invoices) {
-            const { results } = processInvoice(inv, ledger, rules);
-            allExceptions.push(...results.filter(r => r.status === 'exception'));
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const list = Array.isArray(data?.invoices) ? data.invoices
+                     : Array.isArray(data) ? data
+                     : (data && data.invoiceId ? [data] : []);
+          for (const inv of list) {
+            for (const ex of (inv.exceptions || [])) {
+              allExceptions.push({
+                invoiceId: inv.invoiceId,
+                vendorName: inv.businessName || ex.businessName,
+                categoryName: ex.lineItemCategory,
+                description: ex.lineItemDescription,
+                lineTotal: ex.lineTotal,
+                reason: ex.reason
+              });
+            }
           }
-          summary.textContent = `Evaluated ${invoices.length} invoice(s) from ${runName}.`;
+          summary.textContent = `Loaded ${allExceptions.length} exception(s) from ${runName}.`;
           renderExceptions();
+
+          // Load cached draft result if available.
+          const cachedRes = await fetch(`/exception/runs/${encodeURIComponent(runName)}`);
+          if (cachedRes.ok) {
+            const cached = await cachedRes.json();
+            renderDraftResult(cached.response || '');
+            summary.textContent += ' Cached draft loaded — click Draft notifications to overwrite.';
+          }
         } catch (err) {
           summary.innerHTML = `<span class="error">Error: ${esc(err.message)}</span>`;
           document.getElementById('exc-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;

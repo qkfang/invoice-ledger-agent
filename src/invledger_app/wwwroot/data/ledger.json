@@ -56,7 +56,5 @@
     }
   ],
   "postedEntries": [
-    { "entryId": "GL-5001", "invoiceId": "INV-2026-0000", "vendorName": "Northwind Office Supplies", "category": "Office Supplies", "item": "A4 Paper (case)", "amount": 200.00, "postedDate": "2026-04-22", "status": "posted" },
-    { "entryId": "GL-5002", "invoiceId": "INV-2026-0000", "vendorName": "Globex Consulting", "category": "Professional Services", "item": "Solution Architecture Review", "amount": 5000.00, "postedDate": "2026-04-28", "status": "posted" }
   ]
 }

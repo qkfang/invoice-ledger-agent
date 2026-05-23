@@ -6,7 +6,7 @@ namespace InvLedgerAgent.Api;
 
 record NoticeUrlRequest(string Url);
 record NoticeTextRequest(string Text);
-record JsonRequest(string Json);
+record JsonRequest(string Json, string? RunName = null);
 record ApproveRequest(string RunId, bool Approved);
 record SendEmailRequest(string To, string Subject, string Body);
 record CorrespondenceChatRequest(string PreviousResponseId, string Message);
@@ -262,10 +262,37 @@ public static class Endpoints
                 }
             }
 
-            var pdfs = files
+            var pdfNames0 = files
                 .Where(b => b.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                .Select(b => new { name = b, url = $"/ingestion/runs/{safeRun}/{Uri.EscapeDataString(b)}" })
                 .ToArray();
+
+            var pdfs = new List<object>();
+            foreach (var name in pdfNames0)
+            {
+                var baseName = Path.GetFileNameWithoutExtension(name);
+                string? extractJson = null;
+                string? extractMarkdown = null;
+                if (fromLocal)
+                {
+                    if (localRunStorage.FileExists(safeRun, $"{baseName}.extract.json"))
+                    {
+                        var s = localRunStorage.OpenRead(safeRun, $"{baseName}.extract.json");
+                        if (s is not null) { using var r = new StreamReader(s); extractJson = await r.ReadToEndAsync(); }
+                    }
+                    if (localRunStorage.FileExists(safeRun, $"{baseName}.extract.md"))
+                    {
+                        var s = localRunStorage.OpenRead(safeRun, $"{baseName}.extract.md");
+                        if (s is not null) { using var r = new StreamReader(s); extractMarkdown = await r.ReadToEndAsync(); }
+                    }
+                }
+                pdfs.Add(new
+                {
+                    name,
+                    url = $"/ingestion/runs/{safeRun}/{Uri.EscapeDataString(name)}",
+                    extractJson,
+                    extractMarkdown
+                });
+            }
 
             return Results.Ok(new { runName = safeRun, email, pdfs });
         });
@@ -441,11 +468,56 @@ public static class Endpoints
             if (string.IsNullOrWhiteSpace(request.Json))
                 return Results.BadRequest(new { error = "json is required" });
 
-            logger.LogInformation("Processing run request ({Length} chars)", request.Json.Length);
-            var input = $"Process the following invoice. Use the fx_convert MCP tool to convert the totalAmount to AUD, then return the standardised extracted invoice JSON.\n\nInvoice:\n{request.Json}";
+            // Provide the agent with the approved ledger and matching rules so it can classify line items.
+            string ledgerJson = "{}", rulesJson = "[]";
+            try { ledgerJson = await File.ReadAllTextAsync(Path.Combine(webRootPath, "data", "ledger.json")); } catch { }
+            try
+            {
+                var rulesRaw = await File.ReadAllTextAsync(Path.Combine(webRootPath, "data", "rules.json"));
+                using var rdoc = JsonDocument.Parse(rulesRaw);
+                rulesJson = rdoc.RootElement.TryGetProperty("rules", out var rEl) ? rEl.GetRawText() : rulesRaw;
+            }
+            catch { }
+
+            logger.LogInformation("Processing run request ({Length} chars), run={Run}", request.Json.Length, Sanitize(request.RunName ?? ""));
+            var input = $"Process the following payload. Use fx_convert to convert each invoice totalAmount to AUD, then classify every line item against the ledger using the rules. Return JSON only.\n\n{{\n  \"invoices\": {request.Json},\n  \"ledger\": {ledgerJson},\n  \"rules\": {rulesJson}\n}}";
             var response = await processingAgent.RunAsync(input);
+
+            // Persist the parsed agent JSON as processing.json so the exception page can load it.
+            if (!string.IsNullOrWhiteSpace(request.RunName))
+            {
+                var safeRun = Path.GetFileName(request.RunName);
+                var match = System.Text.RegularExpressions.Regex.Match(response ?? string.Empty, @"\{[\s\S]*\}");
+                if (match.Success)
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(match.Value);
+                        var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+                        await localRunStorage.WriteAllTextAsync(safeRun, "processing.json", pretty);
+                    }
+                    catch (JsonException) { /* leave previous processing.json untouched on parse failure */ }
+                }
+
+                // Persist raw agent input/output so the processing page can reload them.
+                var ioOpts = new JsonSerializerOptions { WriteIndented = true };
+                await localRunStorage.WriteAllTextAsync(safeRun, "processing-agentinput.json",
+                    JsonSerializer.Serialize(new { input }, ioOpts));
+                await localRunStorage.WriteAllTextAsync(safeRun, "processing-agentoutput.json",
+                    JsonSerializer.Serialize(new { output = response }, ioOpts));
+            }
+
             return Results.Ok(new { input, response });
         });
+
+        app.MapGet("/processing/runs/{runName}", async (string runName) =>
+            await ReadCachedRunResultAsync(localRunStorage, runName, "processing.json"));
+
+        app.MapGet("/processing/runs/{runName}/agentinput", async (string runName) =>
+            await ReadCachedRunResultAsync(localRunStorage, runName, "processing-agentinput.json"));
+
+        app.MapGet("/processing/runs/{runName}/agentoutput", async (string runName) =>
+            await ReadCachedRunResultAsync(localRunStorage, runName, "processing-agentoutput.json"));
 
         app.MapPost("/exception/draft", async (JsonRequest request) =>
         {
@@ -454,8 +526,12 @@ public static class Endpoints
 
             logger.LogInformation("Exception draft request ({Length} chars)", request.Json.Length);
             var response = await exceptionAgent.RunAsync(request.Json);
+            await CacheAgentResultAsync(localRunStorage, request.RunName, "exception.json", request.Json, response);
             return Results.Ok(new { response });
         });
+
+        app.MapGet("/exception/runs/{runName}", async (string runName) =>
+            await ReadCachedRunResultAsync(localRunStorage, runName, "exception.json"));
 
         app.MapPost("/ledger/ask", async (JsonRequest request) =>
         {
@@ -658,7 +734,24 @@ public static class Endpoints
                 });
             }
 
-            return Results.Ok(new { runFolder = runName, agentResponse, extractedFiles, savedFiles, pdfs });
+            var scenarioResult = new { runFolder = runName, agentResponse, extractedFiles, savedFiles, pdfs };
+            await CacheScenarioResultAsync(localRunStorage, request.ScenarioName, scenarioResult);
+            return Results.Ok(scenarioResult);
+        });
+
+        app.MapGet("/ingestion/scenarios/{scenarioName}/result", (string scenarioName) =>
+        {
+            var safe = Path.GetFileName(scenarioName);
+            if (string.IsNullOrEmpty(safe)) return Results.BadRequest();
+            var path = Path.Combine(localRunStorage.RootPath, "scenario-cache", $"{safe}.json");
+            if (!File.Exists(path)) return Results.NotFound();
+            var json = File.ReadAllText(path);
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                return Results.Ok(doc.RootElement.Clone());
+            }
+            catch (JsonException) { return Results.Problem("Cached scenario result is not valid JSON."); }
         });
 
         app.MapGet("/ingestion/runs/{runName}/{fileName}", async (string runName, string fileName) =>
@@ -707,4 +800,40 @@ public static class Endpoints
 
     private static string Sanitize(string value) =>
         value.Replace('\r', ' ').Replace('\n', ' ');
+
+    private static async Task CacheAgentResultAsync(LocalRunStorageService storage, string? runName, string fileName, string input, string? response)
+    {
+        if (string.IsNullOrWhiteSpace(runName)) return;
+        var safeRun = Path.GetFileName(runName);
+        if (string.IsNullOrEmpty(safeRun)) return;
+        var payload = new { input, response, cachedAt = DateTime.UtcNow.ToString("o") };
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+        await storage.WriteAllTextAsync(safeRun, fileName, json);
+    }
+
+    private static async Task<IResult> ReadCachedRunResultAsync(LocalRunStorageService storage, string runName, string fileName)
+    {
+        var safeRun = Path.GetFileName(runName);
+        if (string.IsNullOrEmpty(safeRun)) return Results.BadRequest();
+        var stream = storage.OpenRead(safeRun, fileName);
+        if (stream is null) return Results.NotFound();
+        using var reader = new StreamReader(stream);
+        var json = await reader.ReadToEndAsync();
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return Results.Ok(doc.RootElement.Clone());
+        }
+        catch (JsonException) { return Results.Problem($"Cached {fileName} is not valid JSON."); }
+    }
+
+    private static async Task CacheScenarioResultAsync(LocalRunStorageService storage, string scenarioName, object result)
+    {
+        var safe = Path.GetFileName(scenarioName);
+        if (string.IsNullOrEmpty(safe)) return;
+        var dir = Path.Combine(storage.RootPath, "scenario-cache");
+        Directory.CreateDirectory(dir);
+        var json = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(Path.Combine(dir, $"{safe}.json"), json);
+    }
 }

@@ -89,3 +89,7 @@ secrets.json
 # Azure
 .azure/
 azure.err
+
+# Local run artifacts
+**/wwwroot/temp/run-*/
+

@@ -59,7 +59,7 @@
     renderHeader('Ledger');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-ledger']);
 
-    let ledger = null, invoices = [];
+    let ledger = null, invoices = [], postedEntries = [];
 
     function setAskLoading(loading) {
       const b = document.getElementById('btn-ask');
@@ -70,12 +70,21 @@
     function renderLedger() {
       const invByCategory = {};
       for (const inv of invoices) {
-        for (const cat of (inv.categories || [])) {
-          const key = cat.categoryName.trim().toLowerCase();
+        const currency = inv.originalInvoiceCurrency || inv.currency;
+        const invoiceId = inv.invoiceId;
+        const items = [...(inv.lineItems || []), ...(inv.exceptions || [])];
+        for (const li of items) {
+          const catName = li.matchedLedgerCategory || li.lineItemCategory;
+          if (!catName) continue;
+          const key = catName.trim().toLowerCase();
           if (!invByCategory[key]) invByCategory[key] = [];
-          for (const li of (cat.lineItems || [])) {
-            invByCategory[key].push({ ...li, invoiceId: inv.invoiceId, currency: inv.currency });
-          }
+          invByCategory[key].push({
+            invoiceId,
+            description: li.lineItemDescription,
+            unitPrice: li.unitPrice,
+            lineTotal: li.lineTotal,
+            currency
+          });
         }
       }
 
@@ -120,21 +129,22 @@
       }).join('');
       document.getElementById('ledger-area').innerHTML = blocks;
 
-      const rows = (ledger.postedEntries || []).map(p => `
+      const rows = (postedEntries || []).map(p => `
         <tr>
           <td>${esc(p.entryId)}</td>
           <td>${esc(p.invoiceId)}</td>
           <td>${esc(p.vendorName)}</td>
+          <td>${esc(p.ledgerCode)}</td>
           <td>${esc(p.category)}</td>
           <td>${esc(p.item)}</td>
-          <td>${fmtMoney(p.amount, ledger.currency)}</td>
+          <td>${fmtMoney(p.amount, p.currency || ledger.currency)}</td>
           <td>${esc(p.postedDate)}</td>
-          <td>${statusBadge(p.status)}</td>
+          <td>${statusBadge(p.status || 'posted')}</td>
         </tr>`).join('');
       document.getElementById('posted-area').innerHTML = `
         <table class="data">
-          <thead><tr><th>Entry</th><th>Invoice</th><th>Vendor</th><th>Category</th><th>Item</th><th>Amount</th><th>Posted</th><th>Status</th></tr></thead>
-          <tbody>${rows || `<tr><td colspan="8" class="empty">No posted entries.</td></tr>`}</tbody>
+          <thead><tr><th>Entry</th><th>Invoice</th><th>Vendor</th><th>Ledger Code</th><th>Category</th><th>Item</th><th>Amount</th><th>Posted</th><th>Status</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="9" class="empty">No posted entries for the selected run.</td></tr>`}</tbody>
         </table>`;
     }
 
@@ -176,6 +186,7 @@
         const domain = await loadDomainData();
         ledger = domain.ledger;
         invoices = [];
+        postedEntries = [];
         renderLedger();
       } catch (err) {
         document.getElementById('ledger-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
@@ -187,18 +198,24 @@
         if (!runName) {
           summary.textContent = '';
           invoices = [];
+          postedEntries = [];
           renderLedger();
           return;
         }
-        summary.textContent = 'Loading invoice…';
+        summary.textContent = 'Loading processing result…';
         try {
-          const payload = await loadRunInvoice(runName);
-          if (!payload) {
-            summary.innerHTML = `<span class="error">No extracted invoice for <strong>${esc(runName)}</strong>. Run the invoice agent on the Invoice tab first.</span>`;
+          const res = await fetch(`/processing/runs/${encodeURIComponent(runName)}`);
+          if (res.status === 404) {
+            summary.innerHTML = `<span class="error">No processing result for <strong>${esc(runName)}</strong>. Run the processing agent on the Processing tab first.</span>`;
             invoices = [];
+            postedEntries = [];
+          } else if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
           } else {
-            invoices = extractInvoiceArray(payload);
-            summary.textContent = `Showing ${invoices.length} invoice(s) from ${runName}.`;
+            const payload = await res.json();
+            invoices = Array.isArray(payload?.invoices) ? payload.invoices : [];
+            postedEntries = invoices.flatMap(i => i.postedEntries || []);
+            summary.textContent = `Showing ${invoices.length} processed invoice(s) and ${postedEntries.length} posted entr${postedEntries.length === 1 ? 'y' : 'ies'} from ${runName}.`;
           }
           renderLedger();
         } catch (err) {

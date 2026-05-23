@@ -108,6 +108,28 @@
         currentRun = await res.json();
         renderRunSummary();
         document.getElementById('btn-run').disabled = false;
+
+        // Try to load cached invoice extraction so we skip re-running the agent.
+        try {
+          const cached = await loadRunInvoice(runName);
+          if (cached) {
+            const pdfs = (currentRun.pdfs || []).map(p => ({
+              name: p.name,
+              storageUrl: p.url,
+              proxyUrl: p.url,
+              extractJson: p.extractJson || null,
+              extractMarkdown: p.extractMarkdown || null
+            }));
+            lastResult = {
+              runName: currentRun.runName,
+              email: currentRun.email,
+              response: JSON.stringify(cached, null, 2),
+              pdfs
+            };
+            document.getElementById('run-status').textContent = 'Loaded cached invoice — click Run to overwrite.';
+            renderAgentResult();
+          }
+        } catch { /* cached invoice missing or invalid; ignore */ }
       } catch (err) {
         summary.innerHTML = `<div class="empty error">Error: ${esc(err.message)}</div>`;
         currentRun = null;
