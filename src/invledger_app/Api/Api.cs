@@ -235,12 +235,12 @@ public static class Endpoints
             if (files.Count == 0) return Results.NotFound();
 
             object? email = null;
-            if (files.Contains("email.json"))
+            if (files.Contains("ingestion.json"))
             {
                 string? json = null;
                 if (fromLocal)
                 {
-                    var stream = localRunStorage.OpenRead(safeRun, "email.json");
+                    var stream = localRunStorage.OpenRead(safeRun, "ingestion.json");
                     if (stream is not null)
                     {
                         using var reader = new StreamReader(stream);
@@ -249,7 +249,7 @@ public static class Endpoints
                 }
                 else
                 {
-                    var dl = await blobStorage.DownloadAsync($"{safeRun}/email.json");
+                    var dl = await blobStorage.DownloadAsync($"{safeRun}/ingestion.json");
                     if (dl is not null)
                     {
                         using var reader = new StreamReader(dl.Value.Content);
@@ -285,11 +285,11 @@ public static class Endpoints
             if (files.Count == 0) return Results.NotFound(new { error = "Run not found" });
 
             string? emailJson = null;
-            if (files.Contains("email.json"))
+            if (files.Contains("ingestion.json"))
             {
                 if (fromLocal)
                 {
-                    var stream = localRunStorage.OpenRead(safeRun, "email.json");
+                    var stream = localRunStorage.OpenRead(safeRun, "ingestion.json");
                     if (stream is not null)
                     {
                         using var reader = new StreamReader(stream);
@@ -298,7 +298,7 @@ public static class Endpoints
                 }
                 else
                 {
-                    var dl = await blobStorage.DownloadAsync($"{safeRun}/email.json");
+                    var dl = await blobStorage.DownloadAsync($"{safeRun}/ingestion.json");
                     if (dl is not null)
                     {
                         using var reader = new StreamReader(dl.Value.Content);
@@ -542,7 +542,7 @@ public static class Endpoints
             foreach (var dir in Directory.GetDirectories(scenariosPath).OrderBy(d => d))
             {
                 var name = Path.GetFileName(dir);
-                var emailPath = Path.Combine(dir, "email.json");
+                var emailPath = Path.Combine(dir, "ingestion.json");
                 if (!File.Exists(emailPath)) continue;
 
                 var emailJson = await File.ReadAllTextAsync(emailPath);
@@ -565,24 +565,24 @@ public static class Endpoints
             if (!Directory.Exists(scenarioDir))
                 return Results.BadRequest(new { error = "Scenario not found" });
 
-            var emailPath = Path.Combine(scenarioDir, "email.json");
+            var emailPath = Path.Combine(scenarioDir, "ingestion.json");
             if (!File.Exists(emailPath))
-                return Results.BadRequest(new { error = "email.json not found in scenario" });
+                return Results.BadRequest(new { error = "ingestion.json not found in scenario" });
 
             var emailJson = await File.ReadAllTextAsync(emailPath);
             JsonElement emailObj;
             try { emailObj = JsonSerializer.Deserialize<JsonElement>(emailJson); }
-            catch { return Results.BadRequest(new { error = "Invalid email.json" }); }
+            catch { return Results.BadRequest(new { error = "Invalid ingestion.json" }); }
 
             var dt = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
             var runName = $"run-{dt}";
             var runDir = localRunStorage.EnsureRunDir(runName);
 
-            // Save email.json to local temp first (primary store).
-            await localRunStorage.WriteAllTextAsync(runName, "email.json", emailJson);
+            // Save ingestion.json to local temp first (primary store).
+            await localRunStorage.WriteAllTextAsync(runName, "ingestion.json", emailJson);
             // Then mirror to remote storage account (secondary).
             using (var emailMs = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(emailJson)))
-                await blobStorage.UploadAsync(emailMs, $"{runName}/email.json");
+                await blobStorage.UploadAsync(emailMs, $"{runName}/ingestion.json");
 
             var pdfFileNames = new List<string>();
             if (emailObj.TryGetProperty("attachments", out var attachments))
@@ -609,7 +609,7 @@ public static class Endpoints
             }
 
             var blobUrls = new Dictionary<string, string>();
-            var savedFiles = new List<string> { "email.json" };
+            var savedFiles = new List<string> { "ingestion.json" };
 
             foreach (var pdfName in pdfFileNames)
             {
