@@ -7,6 +7,12 @@ param location string = 'swedencentral'
 @description('Principal object IDs to grant access to deployed resources')
 param principals array = []
 
+@description('Fabric capacity SKU')
+param fabricSkuName string = 'F2'
+
+@description('Fabric capacity administrator UPNs or object IDs')
+param fabricAdminMembers array = []
+
 var commonTags = {
   SecurityControl: 'Ignore'
 }
@@ -17,6 +23,7 @@ var logAnalyticsName = '${baseName}-law'
 var appInsightsName = '${baseName}-ai'
 var appServicePlanName = '${baseName}-asp'
 var webAppName = '${baseName}-web'
+var fabricCapacityName = replace('${baseName}fabric', '-', '')
 
 // ── Storage Account ──────────────────────────────────────────────────────────
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
@@ -120,6 +127,18 @@ resource foundryDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
     metrics: [
       { category: 'AllMetrics', enabled: true }
     ]
+  }
+}
+
+// ── Fabric Capacity ──────────────────────────────────────────────────────────
+module fabricCapacity 'fabric.bicep' = {
+  name: 'fabricCapacityDeployment'
+  params: {
+    name: fabricCapacityName
+    location: location
+    tags: commonTags
+    skuName: fabricSkuName
+    adminMembers: fabricAdminMembers
   }
 }
 

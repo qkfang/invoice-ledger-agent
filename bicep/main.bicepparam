@@ -8,3 +8,8 @@ param principals = [
     principalType: 'User'
   }
 ]
+param fabricSkuName = 'F2'
+param fabricAdminMembers = [
+  'danielfang@MngEnvMCAP951655.onmicrosoft.com'
+  'fabric@MngEnvMCAP951655.onmicrosoft.com'
+]
