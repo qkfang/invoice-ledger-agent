@@ -11,50 +11,55 @@
     .field-grid { display: grid; grid-template-columns: 160px 1fr; gap: 6px 14px; font-size: 0.9rem; }
     .field-grid .k { color: var(--muted); font-weight: 600; }
 
-    /* Email inbox layout */
+    /* Outlook-style email inbox layout */
     .email-layout {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 0;
       border: 1px solid var(--border);
       border-radius: 10px;
       overflow: hidden;
       background: var(--card);
       box-shadow: 0 2px 12px rgba(0,0,0,0.06);
       margin-bottom: 18px;
-      min-height: 340px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: 480px;
     }
-    @media (max-width: 700px) { .email-layout { grid-template-columns: 1fr; } }
 
     .email-list {
       border-right: 1px solid var(--border);
+      background: var(--input-bg);
       overflow-y: auto;
-      max-height: 420px;
+      display: flex;
+      flex-direction: column;
     }
     .email-list-header {
-      padding: 12px 14px 10px;
+      padding: 12px 14px;
       font-size: 0.78rem;
       font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
       border-bottom: 1px solid var(--border);
-      background: var(--input-bg);
+      background: #fff;
     }
-    .email-item {
-      padding: 11px 14px;
-      cursor: pointer;
+    .email-list-item {
+      padding: 12px 14px;
       border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
       transition: background 0.12s;
     }
-    .email-item:last-child { border-bottom: none; }
-    .email-item:hover { background: #f0f4ff; }
-    .email-item.selected { background: #eef2ff; border-left: 3px solid var(--primary); padding-left: 11px; }
-    .email-item-from { font-size: 0.82rem; font-weight: 700; color: var(--text); display: flex; justify-content: space-between; }
-    .email-item-date { font-size: 0.72rem; color: var(--muted); font-weight: 400; }
-    .email-item-subject { font-size: 0.8rem; color: #444; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .email-item-preview { font-size: 0.75rem; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .email-unread-dot { display: inline-block; width: 7px; height: 7px; background: var(--primary); border-radius: 50%; margin-right: 5px; flex-shrink: 0; margin-top: 4px; }
+    .email-list-item:hover { background: #eef2f7; }
+    .email-list-item.active {
+      background: #fff;
+      border-left: 3px solid #0369a1;
+      padding-left: 11px;
+    }
+    .email-list-from { font-weight: 700; font-size: 0.88rem; color: var(--text); }
+    .email-list-subject { font-size: 0.82rem; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .email-list-preview { font-size: 0.76rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .email-list-empty { padding: 16px; color: var(--muted); font-size: 0.85rem; }
 
     .email-detail {
       padding: 18px 20px;
@@ -103,19 +108,13 @@
 
     <!-- Email Inbox (populated from scenarios) -->
     <div class="email-layout" id="email-layout">
-      <div class="email-list">
+      <div class="email-list" id="email-list">
         <div class="email-list-header">📧 Inbox</div>
-        <div id="email-list-body"><div class="empty" style="padding:20px;">Loading…</div></div>
+        <div class="email-list-empty" id="email-list-body">Loading…</div>
       </div>
       <div class="email-detail" id="email-detail">
         <div class="email-detail-empty"><div class="empty">Select an email to view details and attachments.</div></div>
       </div>
-    </div>
-
-    <!-- Documents / Attachments (shown after email selection) -->
-    <div class="card" id="attachments-card" style="display:none;">
-      <h2>📎 Attachments</h2>
-      <div id="attachments-area"></div>
     </div>
 
     <!-- Process result -->
@@ -142,28 +141,29 @@
     }
 
     function renderScenarioList(scenarios) {
-      const body = document.getElementById('email-list-body');
-      if (!scenarios.length) { body.innerHTML = '<div class="empty" style="padding:20px;">No scenarios.</div>'; return; }
-      body.innerHTML = scenarios.map(s => `
-        <div class="email-item" data-name="${esc(s.name)}" tabindex="0" role="button" aria-label="Scenario ${esc(s.name)}">
-          <div class="email-item-from">
-            <span><span class="email-unread-dot"></span>${esc(s.email.fromName)}</span>
-            <span class="email-item-date">${esc(s.email.date)}</span>
-          </div>
-          <div class="email-item-subject">${esc(s.email.subject)}</div>
-          <div class="email-item-preview">${esc(s.email.preview)}</div>
-        </div>`).join('');
-
-      body.querySelectorAll('.email-item').forEach(item => {
-        const select = () => {
-          body.querySelectorAll('.email-item').forEach(el => el.classList.remove('selected'));
-          item.classList.add('selected');
-          item.querySelector('.email-unread-dot')?.remove();
-          const scenario = scenarios.find(s => s.name === item.dataset.name);
-          if (scenario) showScenarioDetail(scenario);
-        };
-        item.addEventListener('click', select);
-        item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') select(); });
+      const listBody = document.getElementById('email-list-body');
+      const list = document.getElementById('email-list');
+      if (!scenarios.length) {
+        listBody.textContent = 'No scenarios available';
+        return;
+      }
+      // Replace placeholder with actual items
+      listBody.remove();
+      scenarios.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'email-list-item';
+        item.dataset.name = s.name;
+        const preview = (s.email.body || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+        item.innerHTML = `
+          <div class="email-list-from">${esc(s.email.fromName || '')}</div>
+          <div class="email-list-subject">${esc(s.email.subject || '')}</div>
+          <div class="email-list-preview">${esc(preview)}</div>`;
+        item.addEventListener('click', () => {
+          document.querySelectorAll('.email-list-item').forEach(el => el.classList.remove('active'));
+          item.classList.add('active');
+          showScenarioDetail(s);
+        });
+        list.appendChild(item);
       });
     }
 
@@ -179,9 +179,12 @@
           <div class="email-meta-row"><span class="email-meta-key">Date</span><span class="email-meta-val">${esc(email.date)}</span></div>
         </div>
         <div class="email-body">${esc(email.body)}</div>
-        <button class="btn-process" id="btn-process-email">⚙ Process Selected Email</button>`;
-      document.getElementById('btn-process-email').addEventListener('click', processSelectedScenario);
+        <div id="attachments-area"></div>
+        <div id="process-action-area"></div>`;
       renderAttachments(email.attachments || []);
+      const action = document.getElementById('process-action-area');
+      action.innerHTML = `<button class="btn-process" id="btn-process-email">⚙ Process Selected Email</button>`;
+      document.getElementById('btn-process-email').addEventListener('click', processSelectedScenario);
     }
 
     async function processSelectedScenario() {
@@ -219,48 +222,86 @@
       let parsed = null;
       if (m) { try { parsed = JSON.parse(m[0]); } catch {} }
 
-      let summaryHtml = '';
+      const invoices = (parsed && Array.isArray(parsed.invoices)) ? parsed.invoices : [];
+      const pdfs = Array.isArray(data.pdfs) ? data.pdfs : [];
+
+      function findInvoiceForPdf(pdfName) {
+        return invoices.find(inv => (inv.fileName || '').toLowerCase() === pdfName.toLowerCase())
+          || invoices.find(inv => pdfName.toLowerCase().includes((inv.invoiceId || '').toLowerCase()))
+          || null;
+      }
+
+      let statusHtml = '';
       if (parsed) {
         const statusBg = parsed.ingestionStatus === 'accepted' ? '#f0fdf4' : '#fef2f2';
         const statusBorder = parsed.ingestionStatus === 'accepted' ? '#86efac' : '#fca5a5';
-        summaryHtml = `
+        statusHtml = `
           <div style="background:${statusBg};border:1px solid ${statusBorder};border-radius:6px;padding:10px 14px;margin-bottom:12px;">
-            <div style="font-weight:700;font-size:0.9rem;margin-bottom:4px;">
+            <div style="font-weight:700;font-size:0.9rem;">
               ${statusBadge(parsed.ingestionStatus)} &nbsp; ${esc(parsed.reason || '')}
             </div>
           </div>`;
-
-        if (Array.isArray(parsed.invoices) && parsed.invoices.length) {
-          summaryHtml += parsed.invoices.map(inv => `
-            <div class="invoice-card">
-              <h4>📄 ${esc(inv.fileName || inv.invoiceId || 'Invoice')}</h4>
-              <div class="field-grid">
-                <div class="k">Invoice ID</div><div>${esc(inv.invoiceId)}</div>
-                <div class="k">Vendor</div><div>${esc(inv.vendorName)}</div>
-                <div class="k">Invoice Date</div><div>${esc(inv.invoiceDate)}</div>
-                <div class="k">Currency</div><div>${esc(inv.currency)}</div>
-                <div class="k">Total Amount</div><div>${esc(String(inv.totalAmount))}</div>
-              </div>
-            </div>`).join('');
-        }
       }
 
       const filesHtml = (data.savedFiles || []).map(f => `<span style="margin-right:10px;">📄 ${esc(f)}</span>`).join('');
+
+      const pdfOptions = pdfs.length
+        ? pdfs.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join('')
+        : '<option value="">No PDFs</option>';
+
       resultArea.innerHTML = `
         <div style="font-size:0.85rem;color:#166534;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 12px;margin-bottom:12px;">
           📁 Run folder: <strong>${esc(data.runFolder)}</strong> &nbsp;|&nbsp; ${filesHtml}
         </div>
-        ${summaryHtml}
-        <details style="margin-top:10px;">
+        ${statusHtml}
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+          <label for="pdf-select" style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">📄 PDF</label>
+          <select id="pdf-select" style="flex:1;min-width:240px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.88rem;background:#fff;">${pdfOptions}</select>
+        </div>
+        <div id="pdf-detail-area"></div>
+        <details style="margin-top:12px;">
           <summary style="cursor:pointer;font-size:0.82rem;color:var(--muted);">Raw Agent Response</summary>
           <pre style="margin-top:6px;">${esc(agentResp)}</pre>
         </details>`;
+
+      function renderPdfDetail(idx) {
+        const area = document.getElementById('pdf-detail-area');
+        const pdf = pdfs[idx];
+        if (!pdf) { area.innerHTML = ''; return; }
+        const inv = findInvoiceForPdf(pdf.name);
+        const invHtml = inv ? `
+          <div class="field-grid">
+            <div class="k">File</div><div>${esc(pdf.name)}</div>
+            <div class="k">Invoice ID</div><div>${esc(inv.invoiceId)}</div>
+            <div class="k">Vendor</div><div>${esc(inv.vendorName)}</div>
+            <div class="k">Invoice Date</div><div>${esc(inv.invoiceDate)}</div>
+            <div class="k">Currency</div><div>${esc(inv.currency)}</div>
+            <div class="k">Total Amount</div><div>${esc(String(inv.totalAmount))}</div>
+          </div>` : `<div class="empty">No extracted data matched for this PDF.</div>`;
+
+        area.innerHTML = `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;border:1px solid var(--border);border-radius:8px;padding:14px;background:#f8fafc;">
+            <div style="min-height:520px;background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+              <iframe src="${esc(pdf.url)}" style="width:100%;height:560px;border:none;" title="${esc(pdf.name)}"></iframe>
+            </div>
+            <div>
+              <h4 style="margin:0 0 10px;font-size:0.95rem;">📄 Extracted Invoice</h4>
+              ${invHtml}
+            </div>
+          </div>`;
+      }
+
+      const sel = document.getElementById('pdf-select');
+      if (sel && pdfs.length) {
+        sel.addEventListener('change', () => renderPdfDetail(parseInt(sel.value, 10)));
+        renderPdfDetail(0);
+      }
     }
 
     function renderAttachments(attachments) {
-      const card = document.getElementById('attachments-card');
       const area = document.getElementById('attachments-area');
-      card.style.display = '';
+      if (!area) return;
+      if (!attachments.length) { area.innerHTML = ''; return; }
 
       const invoiceMap = {};
       allInvoices.forEach(inv => { invoiceMap[inv.invoiceId] = inv; });
@@ -278,6 +319,7 @@
       }).join('');
 
       area.innerHTML = `
+        <div style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">📎 Attachments</div>
         <table class="data">
           <thead><tr><th>Document</th><th>Vendor</th><th>Invoice Date</th><th>Total</th><th>Status</th></tr></thead>
           <tbody>${rows}</tbody>
@@ -291,8 +333,7 @@
         allInvoices = invoices;
         renderScenarioList(scenarios);
       } catch (err) {
-        document.getElementById('email-list-body').innerHTML =
-          `<div class="empty" style="padding:20px;color:#991b1b;">${esc(err.message)}</div>`;
+        document.getElementById('email-list-body').textContent = `Error: ${err.message}`;
       }
     })();
   </script>

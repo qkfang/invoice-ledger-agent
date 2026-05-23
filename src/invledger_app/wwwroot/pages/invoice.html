@@ -35,319 +35,230 @@
         <h2>Invoice Inbox</h2>
         <div class="row">
           <label for="email-folder">Email Folder</label>
-          <select id="email-folder"><option value="">All Invoices</option></select>
+          <select id="email-folder"><option value="">Loading runs…</option></select>
         </div>
         <div id="scenario-banner"></div>
-        <div id="list-area" class="invoice-list"><div class="empty">Loading...</div></div>
+        <div id="run-summary" style="margin-top:10px;"><div class="empty">Select a run to view email and attachments.</div></div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button id="btn-process" class="btn-process" disabled>Process Documents</button>
           <button id="btn-run" disabled>Run Invoice Agent</button>
         </div>
         <div id="run-status" style="margin-top:6px;font-size:0.82rem;color:var(--muted);"></div>
       </div>
       <div class="card">
         <h2>Extracted Invoice</h2>
-        <div id="detail-area"><div class="empty">Select an invoice on the left.</div></div>
+        <div id="detail-area"><div class="empty">Run the invoice agent to see extracted data.</div></div>
       </div>
     </div>
 
     <div class="card" id="doc-extract-card" style="display:none;">
       <h2>Document Processing</h2>
-      <div class="tabs">
-        <button class="tab active" data-tab="view">Preview</button>
-        <button class="tab" data-tab="json">CU JSON</button>
-        <button class="tab" data-tab="agent">Agent Result</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+        <label for="pdf-select" style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">📄 PDF</label>
+        <select id="pdf-select" style="flex:1;min-width:240px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.88rem;background:#fff;"><option value="">No PDFs</option></select>
       </div>
-      <div class="tab-panel active" data-panel="view">
-        <div class="output-split">
-          <div id="doc-preview-invoice" class="doc-preview"><div class="empty">Select an invoice to preview the document.</div></div>
-          <div id="cu-markdown-area" class="md-render"><div class="empty">Click "Process Documents" to extract content.</div></div>
-        </div>
-      </div>
-      <div class="tab-panel" data-panel="json">
-        <pre id="cu-json-area">—</pre>
-      </div>
-      <div class="tab-panel" data-panel="agent">
-        <div id="agent-result-area"><div class="empty">Run "Process Documents" to see the invoice agent result.</div></div>
-      </div>
+      <div id="pdf-detail-area"><div class="empty">Select a PDF to view document and extracted data.</div></div>
+      <details style="margin-top:12px;">
+        <summary style="cursor:pointer;font-size:0.82rem;color:var(--muted);">Raw Agent Response</summary>
+        <pre id="agent-raw-area" style="margin-top:6px;">—</pre>
+      </details>
     </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.5/dist/purify.min.js"></script>
-  <script src="../assets/app.js?v=20260522"></script>
-  <script src="../assets/workflow.js?v=20260522"></script>
+  <script src="../assets/app.js?v=20260523"></script>
+  <script src="../assets/workflow.js?v=20260523"></script>
   <script>
     renderHeader('Invoice');
     mountAgentInstructionsPanel('agent-info-host', ['inv-ldg-ag-invoice']);
     renderEmailFolderBanner('email-folder-banner');
 
-    let invoices = [];
-    let fxRates = [];
-    let emails = [];
-    let selectedId = null;
+    let currentRun = null;   // { runName, email, pdfs:[{name,url}] }
+    let lastResult = null;   // { response, pdfs:[{name,storageUrl,proxyUrl}] }
 
-    // Map invoiceId → { sampleRef, docPath, docType }
-    const docMap = {};
-
-    function buildDocMap() {
-      emails.forEach(email => {
-        (email.attachments || []).forEach(att => {
-          if (att.invoiceId && att.sampleRef != null) {
-            docMap[att.invoiceId] = {
-              src: `/samples/sample${att.sampleRef}.png`,
-              type: 'image',
-              fileName: att.name || `invoice-${att.invoiceId}.png`
-            };
-          }
-        });
-      });
-      invoices.forEach(inv => {
-        if (!docMap[inv.invoiceId] && inv.documentName) {
-          const ext = inv.documentName.split('.').pop().toLowerCase();
-          docMap[inv.invoiceId] = {
-            src: `/invoices/${inv.documentName}`,
-            type: ext === 'pdf' ? 'pdf' : 'image',
-            fileName: inv.documentName
-          };
-        }
-      });
-    }
-
-    function buildEmailDropdown() {
+    async function loadRuns() {
       const sel = document.getElementById('email-folder');
-      sel.innerHTML = '<option value="">All Invoices</option>';
-      emails.forEach(e => {
-        const opt = document.createElement('option');
-        opt.value = String(e.id);
-        opt.textContent = `${e.fromName} — ${e.subject}`;
-        sel.appendChild(opt);
-      });
+      try {
+        const res = await fetch('/invoice/runs');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const runs = await res.json();
+        if (!runs.length) {
+          sel.innerHTML = '<option value="">No runs in storage</option>';
+          return;
+        }
+        sel.innerHTML = '<option value="">— Select a run —</option>' +
+          runs.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+      } catch (err) {
+        sel.innerHTML = `<option value="">Error: ${esc(err.message)}</option>`;
+      }
     }
 
-    function getFilteredInvoices() {
-      const emailId = document.getElementById('email-folder').value;
-      if (!emailId) return invoices;
-      const email = emails.find(e => String(e.id) === emailId);
-      if (!email) return invoices;
-      const ids = new Set((email.attachments || []).map(a => a.invoiceId));
-      return invoices.filter(i => ids.has(i.invoiceId));
+    async function loadRunDetail(runName) {
+      const summary = document.getElementById('run-summary');
+      summary.innerHTML = '<div class="empty">Loading run…</div>';
+      try {
+        const res = await fetch(`/invoice/runs/${encodeURIComponent(runName)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        currentRun = await res.json();
+        renderRunSummary();
+        document.getElementById('btn-run').disabled = false;
+      } catch (err) {
+        summary.innerHTML = `<div class="empty error">Error: ${esc(err.message)}</div>`;
+        currentRun = null;
+        document.getElementById('btn-run').disabled = true;
+      }
+    }
+
+    function renderRunSummary() {
+      if (!currentRun) return;
+      const email = currentRun.email || {};
+      const pdfs = currentRun.pdfs || [];
+      const attHtml = pdfs.length
+        ? `<ul style="margin:6px 0 0 18px;padding:0;font-size:0.85rem;">${pdfs.map(p => `<li>📄 ${esc(p.name)}</li>`).join('')}</ul>`
+        : '<div class="empty" style="margin-top:6px;">No PDFs in this run.</div>';
+      document.getElementById('run-summary').innerHTML = `
+        <div class="field-grid">
+          <div class="k">Run</div><div>${esc(currentRun.runName)}</div>
+          <div class="k">From</div><div>${esc(email.fromName || '')} ${email.from ? `&lt;${esc(email.from)}&gt;` : ''}</div>
+          <div class="k">Subject</div><div>${esc(email.subject || '')}</div>
+          <div class="k">Date</div><div>${esc(email.date || '')}</div>
+        </div>
+        ${email.body ? `<div style="margin-top:8px;font-size:0.83rem;background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:10px;white-space:pre-wrap;line-height:1.5;">${esc(email.body)}</div>` : ''}
+        <div style="margin-top:10px;font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">📎 Attachments</div>
+        ${attHtml}`;
     }
 
     function setRunLoading(loading) {
       const b = document.getElementById('btn-run');
-      b.disabled = loading || !selectedId;
+      b.disabled = loading || !currentRun;
       b.innerHTML = loading ? '<span class="spinner"></span>Running...' : 'Run Invoice Agent';
     }
 
-    function setProcessLoading(loading) {
-      const b = document.getElementById('btn-process');
-      const emailId = document.getElementById('email-folder').value;
-      b.disabled = loading || (!emailId && !selectedId);
-      b.innerHTML = loading ? '<span class="spinner"></span>Processing...' : 'Process Documents';
-    }
+    document.getElementById('email-folder').addEventListener('change', e => {
+      const v = e.target.value;
+      lastResult = null;
+      document.getElementById('detail-area').innerHTML = '<div class="empty">Run the invoice agent to see extracted data.</div>';
+      document.getElementById('doc-extract-card').style.display = 'none';
+      if (v) loadRunDetail(v);
+      else {
+        currentRun = null;
+        document.getElementById('run-summary').innerHTML = '<div class="empty">Select a run to view email and attachments.</div>';
+        document.getElementById('btn-run').disabled = true;
+      }
+    });
 
-    function renderList() {
-      const filtered = getFilteredInvoices();
-      document.getElementById('list-area').innerHTML = filtered.length
-        ? filtered.map(inv => `
-          <button data-id="${esc(inv.invoiceId)}" class="${inv.invoiceId === selectedId ? 'active' : ''}">
-            <div><strong>${esc(inv.invoiceId)}</strong></div>
-            <div style="color:var(--muted);font-size:0.82rem;">${esc(inv.vendorName)} · ${fmtMoney(inv.totalAmount, inv.currency)}</div>
-          </button>`).join('')
-        : '<div class="empty">No invoices in this folder.</div>';
-
-      document.querySelectorAll('#list-area button').forEach(b => {
-        b.addEventListener('click', () => {
-          selectedId = b.dataset.id;
-          document.getElementById('btn-run').disabled = false;
-          setScenario(selectedId);
-          renderScenarioBanner('scenario-banner', invoices);
-          renderList();
-          renderDetail();
-          renderDocPreview();
+    document.getElementById('btn-run').addEventListener('click', async () => {
+      if (!currentRun) return;
+      setRunLoading(true);
+      document.getElementById('run-status').textContent = 'Calling invoice agent…';
+      try {
+        const res = await fetch('/invoice/run-from-storage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ runName: currentRun.runName })
         });
-      });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        lastResult = data;
+        document.getElementById('run-status').textContent = 'Agent completed.';
+        renderAgentResult();
+      } catch (err) {
+        document.getElementById('run-status').textContent = `Error: ${err.message}`;
+        document.getElementById('detail-area').innerHTML = `<div class="empty error">Error: ${esc(err.message)}</div>`;
+      }
+      setRunLoading(false);
+    });
+
+    function parseInvoices(agentResp) {
+      const m = (agentResp || '').match(/\{[\s\S]*\}/);
+      if (!m) return [];
+      try {
+        const obj = JSON.parse(m[0]);
+        if (Array.isArray(obj.invoices)) return obj.invoices;
+        if (obj.invoiceId) return [obj];
+      } catch {}
+      return [];
     }
 
-    function renderDetail() {
-      const inv = invoices.find(i => i.invoiceId === selectedId);
-      if (!inv) { document.getElementById('detail-area').innerHTML = '<div class="empty">Select an invoice on the left.</div>'; return; }
-      const categories = inv.categories.map(c => {
-        const audCatTotal = c.audCategoryTotal ?? convertToAud(c.categoryTotal, inv.currency, fxRates);
-        return `
+    function findInvoiceForPdf(invoices, pdfName) {
+      const lower = pdfName.toLowerCase();
+      return invoices.find(inv => (inv.fileName || '').toLowerCase() === lower)
+        || invoices.find(inv => lower.includes((inv.invoiceId || '').toLowerCase()))
+        || null;
+    }
+
+    function renderAgentResult() {
+      if (!lastResult) return;
+      const pdfs = lastResult.pdfs || [];
+      const invoices = parseInvoices(lastResult.response);
+      document.getElementById('agent-raw-area').textContent = lastResult.response || '—';
+
+      const card = document.getElementById('doc-extract-card');
+      card.style.display = '';
+
+      const sel = document.getElementById('pdf-select');
+      if (!pdfs.length) {
+        sel.innerHTML = '<option value="">No PDFs</option>';
+        document.getElementById('pdf-detail-area').innerHTML = '<div class="empty">No PDFs in this run.</div>';
+        document.getElementById('detail-area').innerHTML = '<div class="empty">No invoices extracted.</div>';
+        return;
+      }
+
+      sel.innerHTML = pdfs.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join('');
+      sel.onchange = () => renderPdfDetail(parseInt(sel.value, 10), pdfs, invoices);
+      renderPdfDetail(0, pdfs, invoices);
+    }
+
+    function renderInvoiceFields(inv) {
+      if (!inv) return '<div class="empty">No extracted data matched for this PDF.</div>';
+      const cats = Array.isArray(inv.categories) ? inv.categories.map(c => `
         <div class="category-block">
-          <h3>${esc(c.categoryName)} <span style="color:var(--muted);font-weight:400;">— ${fmtMoney(c.categoryTotal, inv.currency)}${audCatTotal != null ? ` / AUD ${Number(audCatTotal).toFixed(2)}` : ''}</span></h3>
+          <h3>${esc(c.categoryName)} <span style="color:var(--muted);font-weight:400;">— ${fmtMoney(c.categoryTotal, inv.currency)}</span></h3>
           <table class="data">
-            <thead><tr><th>Description</th><th style="width:80px;">Qty</th><th style="width:110px;">Unit Price</th><th style="width:110px;">Line Total</th><th style="width:110px;">AUD</th></tr></thead>
+            <thead><tr><th>Description</th><th style="width:80px;">Qty</th><th style="width:110px;">Unit Price</th><th style="width:110px;">Line Total</th></tr></thead>
             <tbody>
-              ${c.lineItems.map(li => {
-                const audLine = li.audLineTotal ?? convertToAud(li.lineTotal, inv.currency, fxRates);
-                return `<tr>
-                  <td>${esc(li.description)}</td>
-                  <td>${esc(li.quantity)}</td>
-                  <td>${fmtMoney(li.unitPrice, inv.currency)}</td>
-                  <td>${fmtMoney(li.lineTotal, inv.currency)}</td>
-                  <td>${audLine != null ? `AUD ${Number(audLine).toFixed(2)}` : '—'}</td>
-                </tr>`;
-              }).join('')}
+              ${(c.lineItems || []).map(li => `<tr>
+                <td>${esc(li.description)}</td>
+                <td>${esc(li.quantity)}</td>
+                <td>${fmtMoney(li.unitPrice, inv.currency)}</td>
+                <td>${fmtMoney(li.lineTotal, inv.currency)}</td>
+              </tr>`).join('')}
             </tbody>
           </table>
-        </div>`;
-      }).join('');
-
-      const audTotal = inv.audTotalAmount ?? convertToAud(inv.totalAmount, inv.currency, fxRates);
-      document.getElementById('detail-area').innerHTML = `
+        </div>`).join('') : '';
+      return `
         <div class="field-grid">
           <div class="k">Invoice ID</div><div>${esc(inv.invoiceId)}</div>
           <div class="k">Vendor</div><div>${esc(inv.vendorName)}</div>
           <div class="k">Invoice Date</div><div>${esc(inv.invoiceDate)}</div>
-          <div class="k">Due Date</div><div>${esc(inv.dueDate)}</div>
+          <div class="k">Due Date</div><div>${esc(inv.dueDate || '—')}</div>
           <div class="k">Currency</div><div>${esc(inv.currency)}</div>
-          <div class="k">Total Amount</div><div>${fmtMoney(inv.totalAmount, inv.currency)}${audTotal != null ? ` <span style="color:var(--muted);font-size:0.85em;">/ AUD ${Number(audTotal).toFixed(2)}</span>` : ''}</div>
+          <div class="k">Total Amount</div><div>${fmtMoney(inv.totalAmount, inv.currency)}</div>
         </div>
-        ${categories}`;
+        ${cats}`;
     }
 
-    function renderDocPreview() {
-      const card = document.getElementById('doc-extract-card');
-      card.style.display = '';
-      const previewEl = document.getElementById('doc-preview-invoice');
-      const doc = selectedId ? docMap[selectedId] : null;
-      if (!doc) {
-        previewEl.innerHTML = '<div class="empty">No document available for this invoice.</div>';
-        return;
-      }
-      if (doc.type === 'pdf') {
-        previewEl.innerHTML = `<iframe src="${doc.src}" title="Invoice document"></iframe>`;
-      } else {
-        previewEl.innerHTML = `<img src="${doc.src}" alt="Invoice document" />`;
-      }
+    function renderPdfDetail(idx, pdfs, invoices) {
+      const pdf = pdfs[idx];
+      const area = document.getElementById('pdf-detail-area');
+      if (!pdf) { area.innerHTML = ''; return; }
+      const inv = findInvoiceForPdf(invoices, pdf.name);
+      area.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;border:1px solid var(--border);border-radius:8px;padding:14px;background:#f8fafc;">
+          <div class="doc-preview" style="background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+            <iframe src="${esc(pdf.proxyUrl)}" title="${esc(pdf.name)}" style="width:100%;height:560px;border:none;"></iframe>
+          </div>
+          <div>
+            <h4 style="margin:0 0 10px;font-size:0.95rem;">📄 ${esc(pdf.name)}</h4>
+            ${renderInvoiceFields(inv)}
+          </div>
+        </div>`;
+
+      // also reflect the selected invoice in the top-right detail card
+      document.getElementById('detail-area').innerHTML = renderInvoiceFields(inv);
     }
 
-    document.getElementById('email-folder').addEventListener('change', () => {
-      const emailId = document.getElementById('email-folder').value;
-      const filtered = getFilteredInvoices();
-      if (filtered.length && !filtered.find(i => i.invoiceId === selectedId)) {
-        selectedId = filtered[0]?.invoiceId || null;
-      }
-      document.getElementById('btn-run').disabled = !selectedId;
-      setProcessLoading(false);
-      renderScenarioBanner('scenario-banner', invoices);
-      renderList();
-      renderDetail();
-      renderDocPreview();
-    });
-
-    document.querySelectorAll('.tabs .tab').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const target = btn.dataset.tab;
-        document.querySelectorAll('.tabs .tab').forEach(t => t.classList.toggle('active', t === btn));
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === target));
-      });
-    });
-
-    (async () => {
-      try {
-        const [wf, emailData] = await Promise.all([
-          loadWorkflowData(),
-          loadJson('data/emails.json')
-        ]);
-        invoices = wf.invoices;
-        fxRates = wf.fxRates || [];
-        emails = emailData.emails || [];
-        buildDocMap();
-        buildEmailDropdown();
-        const scenario = getScenario();
-        const scenarioExists = scenario && invoices.find(i => i.invoiceId === scenario);
-        selectedId = scenarioExists ? scenario : (invoices[0]?.invoiceId || null);
-        renderScenarioBanner('scenario-banner', invoices);
-        renderList();
-        renderDetail();
-        renderDocPreview();
-        document.getElementById('btn-run').disabled = !selectedId;
-        setProcessLoading(false);
-      } catch (err) {
-        document.getElementById('list-area').innerHTML = `<div class="empty error">${esc(err.message)}</div>`;
-      }
-    })();
-
-    function showProcessError(msg) {
-      document.getElementById('run-status').textContent = `Error: ${msg}`;
-      document.getElementById('cu-markdown-area').innerHTML = `<div class="empty error">Error: ${esc(msg)}</div>`;
-      document.getElementById('agent-result-area').innerHTML = `<div class="empty error">Error: ${esc(msg)}</div>`;
-    }
-
-    function switchTab(name) {
-      document.querySelectorAll('.tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === name));
-    }
-
-    document.getElementById('btn-process').addEventListener('click', async () => {
-      const emailId = document.getElementById('email-folder').value;
-      let docInfo = selectedId ? docMap[selectedId] : null;
-
-      if (!docInfo && emailId) {
-        const email = emails.find(e => String(e.id) === emailId);
-        const firstAtt = email?.attachments?.[0];
-        if (firstAtt?.invoiceId) docInfo = docMap[firstAtt.invoiceId];
-      }
-      if (!docInfo) { document.getElementById('run-status').textContent = 'No document found for this selection.'; return; }
-
-      setProcessLoading(true);
-      document.getElementById('run-status').textContent = 'Uploading document and running Content Understanding...';
-      document.getElementById('doc-extract-card').style.display = '';
-      document.getElementById('cu-markdown-area').innerHTML = '<div class="empty">Processing...</div>';
-      document.getElementById('cu-json-area').textContent = '—';
-      document.getElementById('agent-result-area').innerHTML = '<div class="empty">Running invoice agent...</div>';
-
-      try {
-        const res = await fetch(docInfo.src);
-        if (!res.ok) throw new Error(`Could not load document: HTTP ${res.status}`);
-        const blob = await res.blob();
-        const file = new File([blob], docInfo.fileName, { type: blob.type || 'application/octet-stream' });
-
-        const fd = new FormData();
-        fd.append('file', file);
-        const apiRes = await fetch('/invoice/process-doc', { method: 'POST', body: fd });
-        const data = await apiRes.json();
-        if (!apiRes.ok) throw new Error(data.error || `HTTP ${apiRes.status}`);
-
-        document.getElementById('cu-markdown-area').innerHTML = renderMarkdown(data.markdown ?? '');
-        document.getElementById('cu-json-area').textContent = data.json ?? '—';
-        document.getElementById('agent-result-area').innerHTML = `<pre>${esc(data.response)}</pre>`;
-        document.getElementById('run-status').textContent = 'Processing complete.';
-        switchTab('view');
-      } catch (err) {
-        showProcessError(err.message);
-      }
-      setProcessLoading(false);
-    });
-
-    document.getElementById('btn-run').addEventListener('click', async () => {
-      const inv = invoices.find(i => i.invoiceId === selectedId);
-      if (!inv) return;
-      setRunLoading(true);
-      document.getElementById('run-status').textContent = 'Calling invoice agent...';
-      document.getElementById('doc-extract-card').style.display = '';
-      document.getElementById('agent-result-area').innerHTML = '<div class="empty">Running...</div>';
-      try {
-        const res = await fetch('/invoice/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json: JSON.stringify(inv, null, 2) })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        document.getElementById('run-status').textContent = 'Agent completed.';
-        document.getElementById('agent-result-area').innerHTML = `<pre>${esc(data.response)}</pre>`;
-        switchTab('agent');
-      } catch (err) {
-        document.getElementById('run-status').textContent = `Error: ${err.message}`;
-        document.getElementById('agent-result-area').innerHTML = `<div class="empty error">Error: ${esc(err.message)}</div>`;
-      }
-      setRunLoading(false);
-    });
+    loadRuns();
   </script>
 </body>
 </html>

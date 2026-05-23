@@ -12,6 +12,7 @@ record SendEmailRequest(string To, string Subject, string Body);
 record CorrespondenceChatRequest(string PreviousResponseId, string Message);
 record ProcessEmailRequest(string EmailJson, string AttachmentJson);
 record ProcessScenarioRequest(string ScenarioName);
+record RunFromStorageRequest(string RunName);
 
 public static class Endpoints
 {
@@ -23,7 +24,8 @@ public static class Endpoints
         InvLdgAgProcessing processingAgent, InvLdgAgException exceptionAgent,
         InvLdgAgLedger ledgerAgent,
         DocIntelligenceService docService, ContentUnderstandingService cuService,
-        BlobStorageService blobStorage, NotificationService notificationService,
+        BlobStorageService blobStorage, LocalRunStorageService localRunStorage,
+        NotificationService notificationService,
         PendingApprovalStore approvalStore, FxRateService fxRateService,
         FabricLakehouseService? fabricLakehouse,
         string webRootPath,
@@ -209,6 +211,124 @@ public static class Endpoints
             return Results.Ok(new { response });
         });
 
+        app.MapGet("/invoice/runs", async () =>
+        {
+            // Local temp folder is primary store for the invoice tab.
+            var local = localRunStorage.ListRuns("run-");
+            if (local.Count > 0)
+                return Results.Ok(local.Take(20).ToArray());
+            // Fallback to remote storage account for runs created elsewhere.
+            var folders = await blobStorage.ListRunFoldersAsync("run-");
+            return Results.Ok(folders.Take(20).ToArray());
+        });
+
+        app.MapGet("/invoice/runs/{runName}", async (string runName) =>
+        {
+            var safeRun = Path.GetFileName(runName);
+            if (string.IsNullOrEmpty(safeRun)) return Results.BadRequest();
+
+            // Prefer local temp folder; fall back to remote storage.
+            List<string> files = localRunStorage.ListFiles(safeRun);
+            var fromLocal = files.Count > 0;
+            if (!fromLocal)
+                files = await blobStorage.ListBlobsInFolderAsync(safeRun);
+            if (files.Count == 0) return Results.NotFound();
+
+            object? email = null;
+            if (files.Contains("email.json"))
+            {
+                string? json = null;
+                if (fromLocal)
+                {
+                    var stream = localRunStorage.OpenRead(safeRun, "email.json");
+                    if (stream is not null)
+                    {
+                        using var reader = new StreamReader(stream);
+                        json = await reader.ReadToEndAsync();
+                    }
+                }
+                else
+                {
+                    var dl = await blobStorage.DownloadAsync($"{safeRun}/email.json");
+                    if (dl is not null)
+                    {
+                        using var reader = new StreamReader(dl.Value.Content);
+                        json = await reader.ReadToEndAsync();
+                    }
+                }
+                if (!string.IsNullOrEmpty(json))
+                {
+                    try { email = JsonSerializer.Deserialize<JsonElement>(json); } catch { email = null; }
+                }
+            }
+
+            var pdfs = files
+                .Where(b => b.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                .Select(b => new { name = b, url = $"/ingestion/runs/{safeRun}/{Uri.EscapeDataString(b)}" })
+                .ToArray();
+
+            return Results.Ok(new { runName = safeRun, email, pdfs });
+        });
+
+        app.MapPost("/invoice/run-from-storage", async (RunFromStorageRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.RunName))
+                return Results.BadRequest(new { error = "runName is required" });
+
+            var safeRun = Path.GetFileName(request.RunName);
+
+            // Read from local temp folder first; fall back to remote storage.
+            List<string> files = localRunStorage.ListFiles(safeRun);
+            var fromLocal = files.Count > 0;
+            if (!fromLocal)
+                files = await blobStorage.ListBlobsInFolderAsync(safeRun);
+            if (files.Count == 0) return Results.NotFound(new { error = "Run not found" });
+
+            string? emailJson = null;
+            if (files.Contains("email.json"))
+            {
+                if (fromLocal)
+                {
+                    var stream = localRunStorage.OpenRead(safeRun, "email.json");
+                    if (stream is not null)
+                    {
+                        using var reader = new StreamReader(stream);
+                        emailJson = await reader.ReadToEndAsync();
+                    }
+                }
+                else
+                {
+                    var dl = await blobStorage.DownloadAsync($"{safeRun}/email.json");
+                    if (dl is not null)
+                    {
+                        using var reader = new StreamReader(dl.Value.Content);
+                        emailJson = await reader.ReadToEndAsync();
+                    }
+                }
+            }
+
+            var account = blobStorage.AccountName;
+            var pdfList = files
+                .Where(b => b.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                .Select(b => new
+                {
+                    name = b,
+                    storageUrl = $"https://{account}.blob.core.windows.net/notices/{safeRun}/{b}",
+                    proxyUrl = $"/ingestion/runs/{safeRun}/{Uri.EscapeDataString(b)}"
+                })
+                .ToList();
+
+            var urlList = string.Join("\n", pdfList.Select(p => $"- {p.name}: {p.storageUrl}"));
+            var prompt = pdfList.Count == 0
+                ? $"Extract invoice details from this email (no PDF attachments):\n\n{emailJson ?? "(no email)"}"
+                : $"Extract structured invoice details for each attached PDF. Use the extractDoc_DI tool against the storage URL of each PDF.\n\nEmail:\n{emailJson ?? "(no email)"}\n\nPDF Documents:\n{urlList}";
+
+            logger.LogInformation("Invoice run-from-storage: {Run}, {Count} PDF(s)", Sanitize(safeRun), pdfList.Count);
+            var response = await invoiceAgent.RunAsync(prompt);
+
+            return Results.Ok(new { runName = safeRun, response, pdfs = pdfList });
+        });
+
         app.MapPost("/invoice/process-doc", async (HttpRequest http) =>
         {
             if (!http.HasFormContentType)
@@ -368,10 +488,13 @@ public static class Endpoints
 
             var dt = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
             var runName = $"run-{dt}";
-            var runDir = Path.Combine(Path.GetTempPath(), "invledger-temp", runName);
-            Directory.CreateDirectory(runDir);
+            var runDir = localRunStorage.EnsureRunDir(runName);
 
-            await File.WriteAllTextAsync(Path.Combine(runDir, "email.json"), emailJson);
+            // Save email.json to local temp first (primary store).
+            await localRunStorage.WriteAllTextAsync(runName, "email.json", emailJson);
+            // Then mirror to remote storage account (secondary).
+            using (var emailMs = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(emailJson)))
+                await blobStorage.UploadAsync(emailMs, $"{runName}/email.json");
 
             var pdfFileNames = new List<string>();
             if (emailObj.TryGetProperty("attachments", out var attachments))
@@ -405,9 +528,11 @@ public static class Endpoints
                 var scenarioPdfPath = Path.Combine(scenarioDir, pdfName);
                 if (!File.Exists(scenarioPdfPath)) continue;
 
-                File.Copy(scenarioPdfPath, Path.Combine(runDir, pdfName), overwrite: true);
+                // Local temp first (primary).
+                await localRunStorage.CopyFromAsync(runName, pdfName, scenarioPdfPath);
                 savedFiles.Add(pdfName);
 
+                // Then upload to remote storage (secondary).
                 using var stream = File.OpenRead(scenarioPdfPath);
                 var blobUrl = await blobStorage.UploadAsync(stream, $"{runName}/{pdfName}");
                 blobUrls[pdfName] = blobUrl.ToString();
@@ -422,6 +547,7 @@ public static class Endpoints
             var agentResponse = await ingestionAgent.RunAsync(prompt);
 
             var extractedFiles = new List<string>();
+            var pdfs = new List<object>();
             foreach (var pdfName in blobUrls.Keys)
             {
                 var baseName = Path.GetFileNameWithoutExtension(pdfName);
@@ -436,9 +562,33 @@ public static class Endpoints
                 await File.WriteAllTextAsync(Path.Combine(runDir, extractedFileName), extractedContent);
                 extractedFiles.Add(extractedFileName);
                 savedFiles.Add(extractedFileName);
+
+                pdfs.Add(new
+                {
+                    name = pdfName,
+                    url = $"/ingestion/runs/{runName}/{Uri.EscapeDataString(pdfName)}"
+                });
             }
 
-            return Results.Ok(new { runFolder = runName, agentResponse, extractedFiles, savedFiles });
+            return Results.Ok(new { runFolder = runName, agentResponse, extractedFiles, savedFiles, pdfs });
+        });
+
+        app.MapGet("/ingestion/runs/{runName}/{fileName}", async (string runName, string fileName) =>
+        {
+            var safeRun = Path.GetFileName(runName);
+            var safeFile = Path.GetFileName(fileName);
+            if (string.IsNullOrEmpty(safeRun) || string.IsNullOrEmpty(safeFile))
+                return Results.BadRequest();
+
+            // Local temp folder is the primary source.
+            var localStream = localRunStorage.OpenRead(safeRun, safeFile);
+            if (localStream is not null)
+                return Results.Stream(localStream, LocalRunStorageService.ContentTypeFor(safeFile), enableRangeProcessing: true);
+
+            // Fallback to remote storage.
+            var result = await blobStorage.DownloadAsync($"{safeRun}/{safeFile}");
+            if (result is null) return Results.NotFound();
+            return Results.Stream(result.Value.Content, result.Value.ContentType, enableRangeProcessing: true);
         });
 
     }

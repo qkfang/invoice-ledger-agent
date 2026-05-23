@@ -51,7 +51,7 @@ public abstract class BaseAgent
     {
         var sw = Stopwatch.StartNew();
 
-        CreateResponseOptions nextOptions = new()
+        CreateResponseOptions? nextOptions = new()
         {
             InputItems = { ResponseItem.CreateUserMessageItem(message) }
         };

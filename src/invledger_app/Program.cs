@@ -43,8 +43,7 @@ var tenantId = builder.Configuration["AZURE_TENANT_ID"];
 var credential = new Azure.Identity.DefaultAzureCredential(new Azure.Identity.DefaultAzureCredentialOptions
 {
     TenantId = tenantId,
-    ExcludeVisualStudioCodeCredential = true,
-    ExcludeSharedTokenCacheCredential = true
+    ExcludeVisualStudioCodeCredential = true
 });
 
 builder.Services.AddSingleton(sp => new DocIntelligenceService(
@@ -64,6 +63,7 @@ builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<PendingApprovalStore>();
 builder.Services.AddSingleton<GeneralLedgerService>();
 builder.Services.AddSingleton<FxRateService>();
+builder.Services.AddSingleton<LocalRunStorageService>();
 
 builder.Services.AddMcpServer()
     .WithHttpTransport(options => { options.Stateless = true; })
@@ -149,9 +149,10 @@ if (!string.IsNullOrWhiteSpace(fabricWorkspaceId) && !string.IsNullOrWhiteSpace(
 }
 
 var fxRateService = app.Services.GetRequiredService<FxRateService>();
+var localRunStorage = app.Services.GetRequiredService<LocalRunStorageService>();
 app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent,
     ingestionAgent, invoiceAgent, processingAgent, exceptionAgent, ledgerAgent,
-    docService, cuService, blobStorage, notificationService, approvalStore, fxRateService, fabricLakehouse,
+    docService, cuService, blobStorage, localRunStorage, notificationService, approvalStore, fxRateService, fabricLakehouse,
     app.Environment.WebRootPath, logger);
 
 await app.RunAsync();
