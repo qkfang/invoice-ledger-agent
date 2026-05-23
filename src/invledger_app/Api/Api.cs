@@ -11,6 +11,7 @@ record ApproveRequest(string RunId, bool Approved);
 record SendEmailRequest(string To, string Subject, string Body);
 record CorrespondenceChatRequest(string PreviousResponseId, string Message);
 record ProcessEmailRequest(string EmailJson, string AttachmentJson);
+record ProcessScenarioRequest(string ScenarioName);
 
 public static class Endpoints
 {
@@ -25,6 +26,7 @@ public static class Endpoints
         BlobStorageService blobStorage, NotificationService notificationService,
         PendingApprovalStore approvalStore, FxRateService fxRateService,
         FabricLakehouseService? fabricLakehouse,
+        string webRootPath,
         ILogger logger)
     {
         app.MapGet("/agents/instructions", () =>
@@ -320,6 +322,123 @@ public static class Endpoints
             logger.LogInformation("Process email: saved {Count} file(s) to folder {Folder}", savedFiles.Count, Sanitize(folder));
             var agentResponse = await ingestionAgent.RunAsync(prompt);
             return Results.Ok(new { folder, agentResponse, savedFiles });
+        });
+
+        app.MapGet("/ingestion/scenarios", async () =>
+        {
+            var scenariosPath = Path.Combine(webRootPath, "scenarios");
+            if (!Directory.Exists(scenariosPath))
+                return Results.Ok(Array.Empty<object>());
+
+            var scenarios = new List<object>();
+            foreach (var dir in Directory.GetDirectories(scenariosPath).OrderBy(d => d))
+            {
+                var name = Path.GetFileName(dir);
+                var emailPath = Path.Combine(dir, "email.json");
+                if (!File.Exists(emailPath)) continue;
+
+                var emailJson = await File.ReadAllTextAsync(emailPath);
+                JsonElement emailObj;
+                try { emailObj = JsonSerializer.Deserialize<JsonElement>(emailJson); }
+                catch { continue; }
+
+                var pdfs = Directory.GetFiles(dir, "*.pdf").Select(Path.GetFileName).ToList();
+                scenarios.Add(new { name, email = emailObj, pdfs });
+            }
+            return Results.Ok(scenarios);
+        });
+
+        app.MapPost("/ingestion/process-scenario", async (ProcessScenarioRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.ScenarioName))
+                return Results.BadRequest(new { error = "scenarioName is required" });
+
+            var scenarioDir = Path.Combine(webRootPath, "scenarios", request.ScenarioName);
+            if (!Directory.Exists(scenarioDir))
+                return Results.BadRequest(new { error = "Scenario not found" });
+
+            var emailPath = Path.Combine(scenarioDir, "email.json");
+            if (!File.Exists(emailPath))
+                return Results.BadRequest(new { error = "email.json not found in scenario" });
+
+            var emailJson = await File.ReadAllTextAsync(emailPath);
+            JsonElement emailObj;
+            try { emailObj = JsonSerializer.Deserialize<JsonElement>(emailJson); }
+            catch { return Results.BadRequest(new { error = "Invalid email.json" }); }
+
+            var dt = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var runName = $"run-{dt}";
+            var runDir = Path.Combine(Path.GetTempPath(), "invledger-temp", runName);
+            Directory.CreateDirectory(runDir);
+
+            await File.WriteAllTextAsync(Path.Combine(runDir, "email.json"), emailJson);
+
+            var pdfFileNames = new List<string>();
+            if (emailObj.TryGetProperty("attachments", out var attachments))
+            {
+                foreach (var att in attachments.EnumerateArray())
+                {
+                    if (att.TryGetProperty("name", out var nameEl))
+                    {
+                        var pdfName = nameEl.GetString() ?? "";
+                        if (!pdfName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) continue;
+                        pdfFileNames.Add(pdfName);
+
+                        var scenarioPdfPath = Path.Combine(scenarioDir, pdfName);
+                        if (!File.Exists(scenarioPdfPath))
+                        {
+                            var sourcePath = Path.Combine(webRootPath, "invoices", pdfName);
+                            if (File.Exists(sourcePath))
+                                File.Copy(sourcePath, scenarioPdfPath);
+                            else
+                                logger.LogWarning("PDF {PdfName} not found in scenario or invoices folder", Sanitize(pdfName));
+                        }
+                    }
+                }
+            }
+
+            var blobUrls = new Dictionary<string, string>();
+            var savedFiles = new List<string> { "email.json" };
+
+            foreach (var pdfName in pdfFileNames)
+            {
+                var scenarioPdfPath = Path.Combine(scenarioDir, pdfName);
+                if (!File.Exists(scenarioPdfPath)) continue;
+
+                File.Copy(scenarioPdfPath, Path.Combine(runDir, pdfName), overwrite: true);
+                savedFiles.Add(pdfName);
+
+                using var stream = File.OpenRead(scenarioPdfPath);
+                var blobUrl = await blobStorage.UploadAsync(stream, $"{runName}/{pdfName}");
+                blobUrls[pdfName] = blobUrl.ToString();
+            }
+
+            var urlList = string.Join("\n", blobUrls.Select(kv => $"- {kv.Key}: {kv.Value}"));
+            var prompt = string.IsNullOrEmpty(urlList)
+                ? $"Process this email (no PDF attachments were found to extract):\n\n{emailJson}"
+                : $"Process this email and extract invoice details from each attached PDF.\n\nEmail:\n{emailJson}\n\nPDF Documents (use extractDoc_DI tool for each URL):\n{urlList}";
+
+            logger.LogInformation("Process scenario: {Scenario}, {Count} PDF(s)", Sanitize(request.ScenarioName), pdfFileNames.Count);
+            var agentResponse = await ingestionAgent.RunAsync(prompt);
+
+            var extractedFiles = new List<string>();
+            foreach (var pdfName in blobUrls.Keys)
+            {
+                var baseName = Path.GetFileNameWithoutExtension(pdfName);
+                var extractedFileName = $"{baseName}.extracted.json";
+                var extractedContent = JsonSerializer.Serialize(new
+                {
+                    source = pdfName,
+                    agentResponse,
+                    processedAt = DateTime.UtcNow.ToString("o")
+                }, new JsonSerializerOptions { WriteIndented = true });
+
+                await File.WriteAllTextAsync(Path.Combine(runDir, extractedFileName), extractedContent);
+                extractedFiles.Add(extractedFileName);
+                savedFiles.Add(extractedFileName);
+            }
+
+            return Results.Ok(new { runFolder = runName, agentResponse, extractedFiles, savedFiles });
         });
 
     }
