@@ -124,7 +124,15 @@ public static class Endpoints
                 }
                 if (!string.IsNullOrEmpty(json))
                 {
-                    try { email = JsonSerializer.Deserialize<JsonElement>(json); } catch { email = null; }
+                    try
+                    {
+                        var doc = JsonSerializer.Deserialize<JsonElement>(json);
+                        if (doc.ValueKind == JsonValueKind.Object && doc.TryGetProperty("email", out var emailProp))
+                            email = emailProp;
+                        else
+                            email = doc;
+                    }
+                    catch { email = null; }
                 }
             }
 

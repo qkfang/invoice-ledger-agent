@@ -20,6 +20,8 @@
     .qa-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 0.88rem; margin-top: 8px; white-space: pre-wrap; }
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    table.data th.inv-col { background: #fef9c3; }
+    table.data td.inv-col { background: #fefce8; }
   </style>
 </head>
 <body>
@@ -68,81 +70,69 @@
     }
 
     function renderLedger() {
-      const invByCategory = {};
-      const codeToCategory = {};
-      for (const c of (ledger.categories || [])) {
-        for (const i of (c.items || [])) {
-          if (i.ledgerCode) codeToCategory[String(i.ledgerCode).trim()] = c.categoryName;
-        }
-      }
-      const classifiedByInvoice = {};
-      for (const r of [...ledgerMatchedAll, ...ledgerExceptionAll]) {
-        if (!classifiedByInvoice[r.invoiceId]) classifiedByInvoice[r.invoiceId] = [];
-        classifiedByInvoice[r.invoiceId].push(r);
-      }
+      const invByCode = {};
+      const invoiceCurrencyById = {};
       for (const inv of invoices) {
-        const currency = inv.invoiceCurrency || inv.originalInvoiceCurrency || inv.currency;
-        const invoiceId = inv.invoiceId;
-        const items = classifiedByInvoice[invoiceId] || [];
-        for (const li of items) {
-          const code = li.ledgerCode;
-          if (!code) continue;
-          const catName = codeToCategory[String(code).trim()];
-          if (!catName) continue;
-          const key = catName.trim().toLowerCase();
-          if (!invByCategory[key]) invByCategory[key] = [];
-          invByCategory[key].push({
-            invoiceId,
-            lineNo: li.lineNo || li.lineItem,
-            description: li.lineItemDescription,
-            ledgerCode: code,
-            unitPrice: li.unitPrice,
-            lineTotal: li.lineTotal,
-            currency
-          });
-        }
+        invoiceCurrencyById[inv.invoiceId] = inv.invoiceCurrency || inv.originalInvoiceCurrency || inv.currency;
+      }
+      for (const r of [...ledgerMatchedAll, ...ledgerExceptionAll]) {
+        const code = r.ledgerCode;
+        if (!code) continue;
+        const key = String(code).trim();
+        if (!invByCode[key]) invByCode[key] = [];
+        invByCode[key].push({
+          invoiceId: r.invoiceId,
+          lineNo: r.lineNo || r.lineItem,
+          description: r.lineItemDescription,
+          ledgerCode: code,
+          unitPrice: r.unitPrice,
+          lineTotal: r.lineTotal,
+          currency: invoiceCurrencyById[r.invoiceId] || ledger.currency
+        });
       }
 
       const blocks = ledger.categories.map(c => {
-        const invItems = invByCategory[c.categoryName.trim().toLowerCase()] || [];
-        const invRows = invItems.length
-          ? invItems.map(li => `
-              <tr>
-                <td>${esc(li.invoiceId)}</td>
-                <td>${esc(li.lineNo)}</td>
-                <td>${esc(li.ledgerCode)}</td>
-                <td>${esc(li.description)}</td>
-                <td>${fmtMoney(li.unitPrice, li.currency)}</td>
-                <td>${fmtMoney(li.lineTotal, li.currency)}</td>
-              </tr>`).join('')
-          : `<tr><td colspan="6" class="empty" style="padding:10px 8px;">No invoice items.</td></tr>`;
+        const itemRows = c.items.map(i => {
+          const code = String(i.ledgerCode || '').trim();
+          const matches = invByCode[code] || [];
+          const rowspan = Math.max(matches.length, 1);
+          const ledgerCells = `
+            <td rowspan="${rowspan}">${esc(i.ledgerCode)}</td>
+            <td rowspan="${rowspan}">${esc(i.itemName)}</td>
+            <td rowspan="${rowspan}">${fmtMoney(i.expectedUnitPrice, ledger.currency)}</td>
+            <td rowspan="${rowspan}" style="color:var(--muted);">${esc((i.aliases || []).join(', '))}</td>`;
+          if (!matches.length) {
+            return `<tr>${ledgerCells}<td colspan="5" class="empty inv-col">No invoice items.</td></tr>`;
+          }
+          return matches.map((li, idx) => `
+            <tr>
+              ${idx === 0 ? ledgerCells : ''}
+              <td class="inv-col">${esc(li.invoiceId)}</td>
+              <td class="inv-col">${esc(li.lineNo)}</td>
+              <td class="inv-col">${esc(li.description)}</td>
+              <td class="inv-col">${fmtMoney(li.unitPrice, li.currency)}</td>
+              <td class="inv-col">${fmtMoney(li.lineTotal, li.currency)}</td>
+            </tr>`).join('');
+        }).join('');
         return `
           <div class="cat-block">
             <h3>${esc(c.categoryName)} <span class="cat-meta">Budget ${fmtMoney(c.approvedBudget, ledger.currency)} · YTD ${fmtMoney(c.ytdBalance, ledger.currency)}</span></h3>
-            <div class="ledger-split">
-              <div>
-                <div class="col-label">Ledger Items</div>
-                <table class="data">
-                  <thead><tr><th style="width:80px;">Code</th><th>Sub-item</th><th style="width:140px;">Expected Unit Price</th><th>Aliases</th></tr></thead>
-                  <tbody>
-                    ${c.items.map(i => `
-                      <tr>
-                        <td>${esc(i.ledgerCode)}</td>
-                        <td>${esc(i.itemName)}</td>
-                        <td>${fmtMoney(i.expectedUnitPrice, ledger.currency)}</td>
-                        <td style="color:var(--muted);">${esc((i.aliases || []).join(', '))}</td>
-                      </tr>`).join('')}
-                  </tbody>
-                </table>
-              </div>
-              <div>
-                <div class="col-label">Invoice Items</div>
-                <table class="data">
-                  <thead><tr><th>Invoice</th><th>Line No</th><th style="width:80px;">Code</th><th>Description</th><th style="width:100px;">Unit Price</th><th style="width:100px;">Line Total</th></tr></thead>
-                  <tbody>${invRows}</tbody>
-                </table>
-              </div>
-            </div>
+            <table class="data">
+              <thead>
+                <tr>
+                  <th style="width:70px;">Code</th>
+                  <th style="width:22%;">Sub-item</th>
+                  <th style="width:120px;">Expected Unit Price</th>
+                  <th style="width:18%;">Aliases</th>
+                  <th class="inv-col">Invoice</th>
+                  <th class="inv-col" style="width:60px;">Line</th>
+                  <th class="inv-col">Description</th>
+                  <th class="inv-col" style="width:100px;">Unit Price</th>
+                  <th class="inv-col" style="width:100px;">Line Total</th>
+                </tr>
+              </thead>
+              <tbody>${itemRows}</tbody>
+            </table>
           </div>`;
       }).join('');
       document.getElementById('ledger-area').innerHTML = blocks;
