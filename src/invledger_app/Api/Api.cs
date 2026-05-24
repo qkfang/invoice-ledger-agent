@@ -753,6 +753,93 @@ public static class Endpoints
             return Results.Ok(scenarioResult);
         });
 
+        app.MapPost("/ingestion/upload-doc", async (HttpRequest http) =>
+        {
+            if (!http.HasFormContentType)
+                return Results.BadRequest(new { error = "multipart/form-data required" });
+
+            var form = await http.ReadFormAsync();
+            var file = form.Files.FirstOrDefault();
+            if (file is null || file.Length == 0)
+                return Results.BadRequest(new { error = "file is required" });
+
+            var safeFileName = Path.GetFileName(file.FileName);
+            var ext = Path.GetExtension(safeFileName).ToLowerInvariant();
+            var allowedExtensions = new HashSet<string> { ".pdf", ".png", ".jpg", ".jpeg" };
+            if (!allowedExtensions.Contains(ext))
+                return Results.BadRequest(new { error = "Only PDF and image files (png, jpg, jpeg) are allowed." });
+
+            var emailBody = form["emailBody"].ToString();
+            var runDt = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var runName = $"run-{runDt}";
+            localRunStorage.EnsureRunDir(runName);
+
+            var savedFiles = new List<string>();
+
+            // Save uploaded file to local run folder and blob storage.
+            byte[] fileBytes;
+            using (var ms = new MemoryStream())
+            {
+                await file.CopyToAsync(ms);
+                fileBytes = ms.ToArray();
+            }
+            await localRunStorage.WriteAllBytesAsync(runName, safeFileName, fileBytes);
+            savedFiles.Add(safeFileName);
+
+            Uri blobUrl;
+            using (var ms = new MemoryStream(fileBytes))
+                blobUrl = await blobStorage.UploadAsync(ms, $"{runName}/{safeFileName}");
+
+            if (fabricLakehouse is not null)
+            {
+                try
+                {
+                    using var ms = new MemoryStream(fileBytes);
+                    await fabricLakehouse.UploadAsync(ms, $"{runName}/{safeFileName}", fileBytes.Length);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Fabric upload failed for {File}", Sanitize(safeFileName));
+                }
+            }
+
+            // Build and save ingestion.json.
+            var ingestionObj = new
+            {
+                from = "noreply@localhost",
+                fromName = "Manual Upload",
+                to = "ap@inbox.local",
+                subject = $"Uploaded invoice: {safeFileName}",
+                date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                body = emailBody,
+                attachments = new[] { new { name = safeFileName } }
+            };
+            var ingestionJson = JsonSerializer.Serialize(ingestionObj, new JsonSerializerOptions { WriteIndented = true });
+            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "ingestion.json", ingestionJson);
+            savedFiles.Add("ingestion.json");
+
+            var prompt = $"Process this email and extract invoice details from the attached document.\n\nEmail:\n{ingestionJson}\n\nPDF Documents (use extractDoc_DI tool for each URL):\n- {safeFileName}: {blobUrl}";
+            logger.LogInformation("Upload doc ingestion: {Run}, file={File}", Sanitize(runName), Sanitize(safeFileName));
+            var agentResponse = await ingestionAgent.RunAsync(prompt);
+
+            var pdfs = new List<object>();
+            if (safeFileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                || safeFileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                || safeFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                || safeFileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
+            {
+                pdfs.Add(new
+                {
+                    name = safeFileName,
+                    url = $"/ingestion/runs/{runName}/{Uri.EscapeDataString(safeFileName)}"
+                });
+            }
+
+            var result = new { runFolder = runName, agentResponse, savedFiles, pdfs };
+            await CacheScenarioResultAsync(localRunStorage, runName, result);
+            return Results.Ok(result);
+        });
+
         app.MapGet("/ingestion/scenarios/{scenarioName}/result", (string scenarioName) =>
         {
             var safe = Path.GetFileName(scenarioName);
