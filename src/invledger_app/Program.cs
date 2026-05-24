@@ -60,7 +60,6 @@ builder.Services.AddSingleton(sp => new ContentUnderstandingService(
     foundryEndpoint, credential, cuGpt41Deployment, cuGpt41MiniDeployment, cuEmbeddingDeployment,
     sp.GetRequiredService<ILogger<ContentUnderstandingService>>()));
 builder.Services.AddSingleton<NotificationService>();
-builder.Services.AddSingleton<PendingApprovalStore>();
 builder.Services.AddSingleton<GeneralLedgerService>();
 builder.Services.AddSingleton<FxRateService>();
 builder.Services.AddSingleton<LocalRunStorageService>();
@@ -117,15 +116,6 @@ var appMcpTool = ResponseTool.CreateMcpTool(
     serverUri: new Uri($"{appMcpUrl}/mcp"),
     toolCallApprovalPolicy: new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.NeverRequireApproval));
 
-var appMcpToolWithApproval = ResponseTool.CreateMcpTool(
-    serverLabel: "invledger-mcp",
-    serverUri: new Uri($"{appMcpUrl}/mcp"),
-    toolCallApprovalPolicy: new McpToolCallApprovalPolicy(GlobalMcpToolCallApprovalPolicy.AlwaysRequireApproval));
-
-var notificationAgent = new InvLdgAgNotification(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgNotification>());
-var correspondenceAgent = new InvLdgAgCorrespondence(aiProjectClient, deploymentName, [appMcpToolWithApproval], loggerFactory.CreateLogger<InvLdgAgCorrespondence>());
-var extractDiAgent = new InvLdgAgExtractDI(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgExtractDI>());
-var extractCuAgent = new InvLdgAgExtractCU(aiProjectClient, deploymentName, loggerFactory.CreateLogger<InvLdgAgExtractCU>());
 var ingestionAgent = new InvLdgAgIngestion(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgIngestion>());
 var invoiceAgent = new InvLdgAgInvoice(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgInvoice>());
 var processingAgent = new InvLdgAgProcessing(aiProjectClient, deploymentName, [appMcpTool], loggerFactory.CreateLogger<InvLdgAgProcessing>());
@@ -136,7 +126,6 @@ var cuService = app.Services.GetRequiredService<ContentUnderstandingService>();
 await cuService.InitializeAsync();
 var blobStorage = app.Services.GetRequiredService<BlobStorageService>();
 var notificationService = app.Services.GetRequiredService<NotificationService>();
-var approvalStore = app.Services.GetRequiredService<PendingApprovalStore>();
 
 var fabricWorkspaceId = app.Configuration["FABRIC_LAKEHOUSE_WORKSPACE_ID"];
 var fabricLakehouseId = app.Configuration["FABRIC_LAKEHOUSE_ID"];
@@ -150,9 +139,9 @@ if (!string.IsNullOrWhiteSpace(fabricWorkspaceId) && !string.IsNullOrWhiteSpace(
 
 var fxRateService = app.Services.GetRequiredService<FxRateService>();
 var localRunStorage = app.Services.GetRequiredService<LocalRunStorageService>();
-app.MapAllEndpoints(notificationAgent, correspondenceAgent, extractDiAgent, extractCuAgent,
+app.MapAllEndpoints(
     ingestionAgent, invoiceAgent, processingAgent, exceptionAgent, ledgerAgent,
-    docService, cuService, blobStorage, localRunStorage, notificationService, approvalStore, fxRateService, fabricLakehouse,
+    docService, cuService, blobStorage, localRunStorage, notificationService, fxRateService, fabricLakehouse,
     app.Environment.WebRootPath, logger);
 
 await app.RunAsync();
