@@ -4,37 +4,70 @@ using QuestPDF.Infrastructure;
 
 QuestPDF.Settings.License = LicenseType.Community;
 
-var outDir = @"c:\repo\invoice-agent\src\invledger_app\wwwroot";
-
-var bloomberg = new Invoice
+static string LocateWwwroot()
 {
-    VendorName = "Bloomberg L.P.",
-    VendorAddress = new[] { "731 Lexington Avenue", "New York, NY 10022", "United States", "Tax ID: 13-3537585" },
-    VendorContact = "billing@bloomberg.net  |  +1 212-318-2000",
+    var dir = AppContext.BaseDirectory;
+    for (int i = 0; i < 12; i++)
+    {
+        var candidate = Path.Combine(dir, "src", "invledger_app", "wwwroot");
+        if (Directory.Exists(candidate)) return candidate;
+        var parent = Directory.GetParent(dir);
+        if (parent == null) break;
+        dir = parent.FullName;
+    }
+    throw new DirectoryNotFoundException("Could not locate src/invledger_app/wwwroot");
+}
+
+var outDir = LocateWwwroot();
+
+var bloomberg = new BloombergInvoice
+{
+    InvoiceNumber = "6885029280",
+    InvoiceDate = "May 16, 2026",
+    AccountNumber = "30307430",
+    PyNumber = "PY 60267133",
+    SupportPhone = "Customer Support 1-212-555-0100",
+    RemitName = "BLOOMBERG L.P.",
+    RemitAddress = new[] { "731 Lexington Avenue", "New York, NY 10022", "(Do not send checks to this location)" },
+    CorrespondenceName = "BLOOMBERG L.P.",
+    CorrespondenceAddress = new[] { "100 Business Park Drive, Suite 1200", "Sample City, CA 90000", "HEAD OFFICE 731 Lexington Avenue", "New York, NY 10022" },
     BillToName = "Accounts Payable",
     BillToAddress = new[] { "Finance Department", "100 Corporate Drive", "Suite 400", "Chicago, IL 60601" },
-    InvoiceNumber = "INV-2026-0004",
-    InvoiceDate = "May 16, 2026",
-    DueDate = "June 15, 2026",
-    ServicePeriod = "May 1 – May 31, 2026",
-    PoNumber = "PO-2026-0411",
-    Terms = "Net 30",
+    BillToAttn = "Accounts Payable Lead",
+    CustomerName = "Sample Customer Holdings Pty Ltd",
+    CustomerAddress = new[] { "Finance Department", "100 Corporate Drive", "Suite 400", "Chicago, IL 60601" },
+    CustomerAttn = "Accounts Payable Lead",
+    CustomerVat = "12.345.678-9-000.000",
     Currency = "USD",
+    PeriodStart = "05/01/26",
+    PeriodEnd = "05/31/26",
     Lines = new()
     {
-        new("BBG-TERM-STD",    "Bloomberg Terminal License – Standard Seat",        5,  5000.00m, "seat/month"),
-        new("BBG-ANY-MOB",     "Bloomberg Anywhere Mobile Access",                  5,   300.00m, "user/month"),
-        new("BBG-DL-REF-T2",   "Data License – Reference Data Feed (Tier 2)",       1,  4200.00m, "month"),
-        new("BBG-BPIPE",       "B-PIPE Managed Market Data Feed",                   1,  3800.00m, "month"),
-        new("BBG-PORT-ENT",    "PORT Enterprise – Portfolio & Risk Analytics",      1,  2500.00m, "month"),
-        new("BBG-AIM",         "AIM – Asset & Investment Manager",                  1,  3200.00m, "month"),
-        new("BBG-MARS",        "MARS Multi-Asset Risk System Module",               1,  2100.00m, "month"),
-        new("BBG-BMC-TRN",     "Bloomberg Market Concepts (BMC) Certification",     3,   250.00m, "user"),
-        new("BBG-SUPPORT",     "Premium Support & SLA (24x7)",                      1,  1200.00m, "month"),
+        new(1, 5,  "",              "", "Bloomberg Terminal License – Standard Seat",      5000.00m),
+        new(2, 5,  "",              "", "Bloomberg Anywhere Mobile Access",                 300.00m),
+        new(3, 1,  "",              "", "Data License – Reference Data Feed (Tier 2)",     4200.00m),
+        new(4, 1,  "Price Increase","", "B-PIPE Managed Market Data Feed",                 3800.00m),
+        new(5, 1,  "",              "", "PORT Enterprise – Portfolio & Risk Analytics",    2500.00m),
+        new(6, 1,  "",              "", "AIM – Asset & Investment Manager",                3200.00m),
+        new(7, 1,  "",              "", "MARS Multi-Asset Risk System Module",             2100.00m),
+        new(8, 3,  "",              "", "Bloomberg Market Concepts Certification",          250.00m),
+        new(9, 1,  "",              "", "Premium Support & SLA (24x7)",                    1200.00m),
     },
-    TaxLabel = "Sales Tax (NY 8.875%)",
-    TaxRate = 0.08875m,
-    Notes = "Wire transfer: Citibank N.A. | ABA 021000089 | Account 30001234 | SWIFT CITIUS33\nReference invoice number on remittance. Late payments accrue 1.5% interest per month."
+    TaxLabel = "TAX",
+    TaxAmount = 3927.19m,
+    BankDetails = new[]
+    {
+        "PLEASE WIRE FUNDS IN U.S. DOLLARS TO:",
+        "BANK NAME: Sample Bank N.A.",
+        "BANK ADDRESS: 100 Sample Street, New York, NY 10000",
+        "ACCOUNT NAME: BLOOMBERG L.P.",
+        "ACCOUNT NUMBER: XXXXXX1234",
+        "ABA / ROUTING: XXXXXXXX9",
+        "SWIFT / BIC: SAMPUS33",
+        "** THIS LOCATION DOES NOT ACCEPT CHECKS **",
+        "PLEASE REFERENCE INVOICE NUMBER 6885029280 WITH PAYMENT"
+    },
+    LegalText = "By directing the payment of and/or paying this invoice, you agree that the payment for and use of the products and services listed above do not violate any applicable laws, breach any fiduciary, contractual, or other obligation of the customer, and, if applicable, satisfy any required statutory provisions.\n\nThis invoice is due upon receipt. If payment is not received within 28 days of the invoice date, you will receive a late notice. Soon afterward, the terminal account will be flagged as overdue and service may be suspended until payment is received as per the terms of your contract."
 };
 
 var morningstar = new Invoice
@@ -104,7 +137,7 @@ var factset = new Invoice
     Notes = "Wire to: Bank of America N.A. | ABA 026009593 | Account 4427889911 | SWIFT BOFAUS3N\nReference invoice number on remittance. For inquiries: ar@factset.com."
 };
 
-InvoicePdf.Render(bloomberg).GeneratePdf(Path.Combine(outDir, "scenarios", "scenario-bloomberg", "bloomberg-may.pdf"));
+BloombergPdf.Render(bloomberg).GeneratePdf(Path.Combine(outDir, "scenarios", "scenario-bloomberg", "bloomberg-may.pdf"));
 MorningstarPdf.Render(morningstar).GeneratePdf(Path.Combine(outDir, "scenarios", "scenario-morningstar", "morningstar-may.pdf"));
 InvoicePdf.Render(factset).GeneratePdf(Path.Combine(outDir, "scenarios", "scenario-factset", "factset-may.pdf"));
 
@@ -454,6 +487,258 @@ static class MorningstarPdf
             // Bank transfer / notes
             col.Item().PaddingTop(12).Text("Bank Transfer").Bold().FontSize(9);
             col.Item().PaddingTop(2).Text(inv.Notes).FontSize(8).FontColor(TextMuted);
+        });
+    }
+}
+
+record BloombergLineItem(int Line, decimal Qty, string ChangeActivity, string RelatedAcct, string Description, decimal Rate)
+{
+    public decimal Amount => Math.Round(Qty * Rate, 2);
+}
+
+class BloombergInvoice
+{
+    public string InvoiceNumber { get; set; } = "";
+    public string InvoiceDate { get; set; } = "";
+    public string AccountNumber { get; set; } = "";
+    public string PyNumber { get; set; } = "";
+    public string SupportPhone { get; set; } = "";
+    public string RemitName { get; set; } = "";
+    public string[] RemitAddress { get; set; } = Array.Empty<string>();
+    public string CorrespondenceName { get; set; } = "";
+    public string[] CorrespondenceAddress { get; set; } = Array.Empty<string>();
+    public string BillToName { get; set; } = "";
+    public string[] BillToAddress { get; set; } = Array.Empty<string>();
+    public string BillToAttn { get; set; } = "";
+    public string CustomerName { get; set; } = "";
+    public string[] CustomerAddress { get; set; } = Array.Empty<string>();
+    public string CustomerAttn { get; set; } = "";
+    public string CustomerVat { get; set; } = "";
+    public string Currency { get; set; } = "USD";
+    public string PeriodStart { get; set; } = "";
+    public string PeriodEnd { get; set; } = "";
+    public List<BloombergLineItem> Lines { get; set; } = new();
+    public string TaxLabel { get; set; } = "TAX";
+    public decimal TaxAmount { get; set; }
+    public string[] BankDetails { get; set; } = Array.Empty<string>();
+    public string LegalText { get; set; } = "";
+
+    public decimal Subtotal => Math.Round(Lines.Sum(l => l.Amount), 2);
+    public decimal Total => Subtotal + TaxAmount;
+}
+
+static class BloombergPdf
+{
+    const string Ink = "#000000";
+    const string Muted = "#3A3A3A";
+    const string Rule = "#000000";
+    const string HeaderFill = "#FFFFFF";
+
+    public static Document Render(BloombergInvoice inv) => Document.Create(c =>
+    {
+        c.Page(p =>
+        {
+            p.Size(PageSizes.Letter);
+            p.Margin(36);
+            p.DefaultTextStyle(t => t.FontSize(9).FontFamily("Helvetica").FontColor(Ink));
+
+            p.Background().Element(bg => bg.AlignCenter().AlignMiddle()
+                .Rotate(-22)
+                .Text("PLEASE REFERENCE INVOICE # WITH PAYMENT")
+                .FontSize(34).Bold().FontColor("#E6E6E6"));
+
+            p.Content().Element(co => Body(co, inv));
+        });
+    });
+
+    static void Body(QuestPDF.Infrastructure.IContainer co, BloombergInvoice inv)
+    {
+        co.Column(col =>
+        {
+            // Top row: logo (left) | page + support (right)
+            col.Item().Row(r =>
+            {
+                r.RelativeItem().Text("Bloomberg").FontSize(22).Bold();
+                r.RelativeItem().AlignRight().Column(c =>
+                {
+                    c.Item().AlignRight().Text("Page 1 of 1").FontSize(9);
+                    c.Item().AlignRight().PaddingTop(2).Text(t =>
+                    {
+                        t.Span("FOR INVOICE INQUIRY, PLEASE CALL:  ").FontSize(8);
+                        t.Span(inv.SupportPhone).FontSize(8).Bold();
+                    });
+                });
+            });
+
+            // Remit / Correspondence address blocks
+            col.Item().PaddingTop(10).Row(r =>
+            {
+                r.RelativeItem().Column(c =>
+                {
+                    c.Item().Text(inv.RemitName).Bold().FontSize(9);
+                    foreach (var line in inv.RemitAddress)
+                        c.Item().Text(line).FontSize(8);
+                });
+                r.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("PLEASE SEND ALL CORRESPONDENCE TO:").FontSize(8);
+                    c.Item().Text(inv.CorrespondenceName).Bold().FontSize(9);
+                    foreach (var line in inv.CorrespondenceAddress)
+                        c.Item().Text(line).FontSize(8);
+                });
+            });
+
+            // Centered INVOICE title
+            col.Item().PaddingTop(8).AlignCenter().Text("INVOICE").FontSize(22).Bold();
+
+            // Bill To / Customer blocks
+            col.Item().PaddingTop(6).Row(r =>
+            {
+                r.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("Bill To:").Bold().FontSize(9);
+                    c.Item().Text(inv.BillToName).FontSize(8);
+                    foreach (var line in inv.BillToAddress)
+                        c.Item().Text(line).FontSize(8);
+                    if (!string.IsNullOrEmpty(inv.BillToAttn))
+                        c.Item().PaddingTop(2).Text(t =>
+                        {
+                            t.Span("Attn: ").Bold().FontSize(8);
+                            t.Span(inv.BillToAttn).FontSize(8);
+                        });
+                    if (!string.IsNullOrEmpty(inv.PyNumber))
+                        c.Item().PaddingTop(2).Text(inv.PyNumber).FontSize(8);
+                });
+                r.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("Customer:").Bold().FontSize(9);
+                    c.Item().Text(inv.CustomerName).FontSize(8);
+                    foreach (var line in inv.CustomerAddress)
+                        c.Item().Text(line).FontSize(8);
+                    if (!string.IsNullOrEmpty(inv.CustomerAttn))
+                        c.Item().PaddingTop(2).Text(t =>
+                        {
+                            t.Span("Attn: ").Bold().FontSize(8);
+                            t.Span(inv.CustomerAttn).FontSize(8);
+                        });
+                    if (!string.IsNullOrEmpty(inv.CustomerVat))
+                        c.Item().PaddingTop(6).Text(t =>
+                        {
+                            t.Span("Customer VAT #: ").Bold().FontSize(9);
+                            t.Span(inv.CustomerVat).FontSize(9);
+                        });
+                });
+            });
+
+            // "Please pay upon receipt" + invoice number / date / account number strip
+            col.Item().PaddingTop(10).Row(r =>
+            {
+                r.RelativeItem().AlignMiddle().Text("Please pay upon receipt").Bold().FontSize(10);
+                r.RelativeItem().Table(t =>
+                {
+                    t.ColumnsDefinition(cd => { cd.RelativeColumn(); cd.RelativeColumn(); cd.RelativeColumn(); });
+                    void Th(string s) => t.Cell().Border(0.5f).BorderColor(Rule).Padding(4).AlignCenter().Text(s).Bold().FontSize(8);
+                    void Td(string s) => t.Cell().Border(0.5f).BorderColor(Rule).Padding(4).AlignCenter().Text(s).FontSize(9);
+                    Th("INVOICE NUMBER");
+                    Th("INVOICE DATE");
+                    Th("ACCOUNT NUMBER");
+                    Td(inv.InvoiceNumber);
+                    Td(inv.InvoiceDate);
+                    Td(inv.AccountNumber);
+                });
+            });
+
+            // Line items table
+            col.Item().PaddingTop(10).Table(t =>
+            {
+                t.ColumnsDefinition(cd =>
+                {
+                    cd.ConstantColumn(28);  // LINE
+                    cd.ConstantColumn(28);  // QTY
+                    cd.ConstantColumn(70);  // CHANGE ACTIVITY
+                    cd.ConstantColumn(60);  // RELATED ACCT
+                    cd.RelativeColumn();    // DESCRIPTION
+                    cd.ConstantColumn(55);  // RATE
+                    cd.ConstantColumn(60);  // PERIOD START
+                    cd.ConstantColumn(60);  // PERIOD END
+                    cd.ConstantColumn(65);  // AMOUNT
+                });
+                t.Header(h =>
+                {
+                    h.Cell().BorderBottom(1).BorderColor(Rule).PaddingVertical(4).PaddingHorizontal(3).Text("LINE").Bold().FontSize(8);
+                    h.Cell().BorderBottom(1).BorderColor(Rule).PaddingVertical(4).PaddingHorizontal(3).Text("QTY").Bold().FontSize(8);
+                    h.Cell().BorderBottom(1).BorderColor(Rule).PaddingVertical(4).PaddingHorizontal(3).Column(c =>
+                    {
+                        c.Item().Text("CHANGE").Bold().FontSize(8);
+                        c.Item().Text("ACTIVITY").Bold().FontSize(8);
+                    });
+                    h.Cell().BorderBottom(1).BorderColor(Rule).PaddingVertical(4).PaddingHorizontal(3).Column(c =>
+                    {
+                        c.Item().Text("RELATED").Bold().FontSize(8);
+                        c.Item().Text("ACCT").Bold().FontSize(8);
+                    });
+                    h.Cell().BorderBottom(1).BorderColor(Rule).PaddingVertical(4).PaddingHorizontal(3).Text("DESCRIPTION").Bold().FontSize(8);
+                    h.Cell().BorderBottom(1).BorderColor(Rule).PaddingVertical(4).PaddingHorizontal(3).AlignRight().Text("RATE").Bold().FontSize(8);
+                    h.Cell().BorderBottom(1).BorderColor(Rule).PaddingVertical(4).PaddingHorizontal(3).Column(c =>
+                    {
+                        c.Item().Text("PERIOD").Bold().FontSize(8);
+                        c.Item().Text("START").Bold().FontSize(8);
+                    });
+                    h.Cell().BorderBottom(1).BorderColor(Rule).PaddingVertical(4).PaddingHorizontal(3).Column(c =>
+                    {
+                        c.Item().Text("PERIOD").Bold().FontSize(8);
+                        c.Item().Text("END").Bold().FontSize(8);
+                    });
+                    h.Cell().BorderBottom(1).BorderColor(Rule).PaddingVertical(4).PaddingHorizontal(3).AlignRight().Text("AMOUNT").Bold().FontSize(8);
+                });
+
+                foreach (var line in inv.Lines)
+                {
+                    t.Cell().PaddingVertical(3).PaddingHorizontal(3).Text(line.Line.ToString()).FontSize(8);
+                    t.Cell().PaddingVertical(3).PaddingHorizontal(3).Text(line.Qty.ToString("0.##")).FontSize(8);
+                    t.Cell().PaddingVertical(3).PaddingHorizontal(3).Text(line.ChangeActivity).FontSize(8);
+                    t.Cell().PaddingVertical(3).PaddingHorizontal(3).Text(line.RelatedAcct).FontSize(8);
+                    t.Cell().PaddingVertical(3).PaddingHorizontal(3).Text(line.Description).FontSize(8);
+                    t.Cell().PaddingVertical(3).PaddingHorizontal(3).AlignRight().Text(line.Rate.ToString("N2")).FontSize(8);
+                    t.Cell().PaddingVertical(3).PaddingHorizontal(3).Text(inv.PeriodStart).FontSize(8);
+                    t.Cell().PaddingVertical(3).PaddingHorizontal(3).Text(inv.PeriodEnd).FontSize(8);
+                    t.Cell().PaddingVertical(3).PaddingHorizontal(3).AlignRight().Text(line.Amount.ToString("N2")).FontSize(8);
+                }
+            });
+
+            // Legal text
+            col.Item().PaddingTop(14).Text(inv.LegalText).FontSize(7).FontColor(Muted);
+
+            // Footer: wire box + totals
+            col.Item().PaddingTop(8).Row(r =>
+            {
+                r.RelativeItem().Border(1).BorderColor(Rule).Padding(5).Column(c =>
+                {
+                    foreach (var line in inv.BankDetails)
+                        c.Item().Text(line).FontSize(7);
+                });
+                r.ConstantItem(12);
+                r.RelativeItem().AlignRight().Column(c =>
+                {
+                    void Row(string label, decimal amount, bool bold = false)
+                    {
+                        c.Item().Row(rr =>
+                        {
+                            var l = rr.RelativeItem().AlignRight().Text(label).FontSize(10);
+                            var v = rr.ConstantItem(90).AlignRight().Text(amount.ToString("N2")).FontSize(10);
+                            if (bold) { l.Bold(); v.Bold(); }
+                        });
+                    }
+                    Row("SUBTOTAL", inv.Subtotal);
+                    Row(inv.TaxLabel, inv.TaxAmount);
+                    c.Item().PaddingTop(2).LineHorizontal(0.5f).LineColor(Rule);
+                    c.Item().PaddingTop(2).Row(rr =>
+                    {
+                        rr.RelativeItem().AlignRight().Text($"TOTAL ({inv.Currency})").Bold().FontSize(11);
+                        rr.ConstantItem(90).AlignRight().Text(inv.Total.ToString("N2")).Bold().FontSize(11);
+                    });
+                });
+            });
         });
     }
 }
