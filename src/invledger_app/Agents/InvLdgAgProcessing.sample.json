@@ -1,0 +1,154 @@
+{
+  "ingestionStatus": "accepted",
+  "reason": "Email body and attachment confirm a valid vendor invoice for the May service period.",
+  "email": {
+    "id": 4,
+    "from": "billing@example.com",
+    "fromName": "Sample Vendor",
+    "to": "ap@company.com",
+    "subject": "Invoice INV-1001 - May Services",
+    "date": "2026-05-10",
+    "preview": "Please find attached your May invoice.",
+    "attachmentCount": 1
+  },
+  "invoices": [
+    {
+      "fileName": "invoice-1001.pdf",
+      "blobUrl": "https://example.blob.core.windows.net/invoices/invoice-1001.pdf",
+      "invoiceId": "INV-1001",
+      "vendorName": "Sample Vendor A",
+      "vendorEmail": "billing@example.com",
+      "invoiceDate": "2026-05-10",
+      "dueDate": "2026-06-09",
+      "paymentTerms": "Net 30",
+      "currency": "USD",
+      "totalAmount": 1234.56,
+      "audTotalAmount": 1851.84,
+      "documentType": "invoice",
+      "extractionStatus": "ok",
+      "extractionNotes": null,
+      
+      "businessName": "Sample Vendor A",
+      "fromDate": "2026-05-10",
+      "toDate": "2026-06-09",
+      "invoiceAmount": 1234.56,
+      "invoiceCurrency": "USD",
+      "exchangeRate": 1.50,
+      "convertedInvoiceAmount": 1851.84,
+      "convertedInvoiceCurrency": "AUD",
+
+      "categories": [
+        {
+          "categoryName": "Hardware",
+          "categoryTotal": 1000.00,
+          "audCategoryTotal": 1500.00,
+          "lineItems": [
+            {
+              "categoryName": "Hardware",
+              "description": "Wireless keyboard",
+              "quantity": 4,
+              "unitPrice": 150.00,
+              "lineTotal": 600.00,
+              "audLineTotal": 900.00
+            },
+            {
+              "categoryName": "Hardware",
+              "description": "USB-C dock",
+              "quantity": 2,
+              "unitPrice": 200.00,
+              "lineTotal": 400.00,
+              "audLineTotal": 600.00
+            }
+          ]
+        },
+        {
+          "categoryName": "Services",
+          "categoryTotal": 234.56,
+          "audCategoryTotal": 351.84,
+          "lineItems": [
+            {
+              "categoryName": "Services",
+              "description": "On-site setup",
+              "quantity": 1,
+              "unitPrice": 234.56,
+              "lineTotal": 234.56,
+              "audLineTotal": 351.84
+            }
+          ]
+        }
+      ],
+      "lineItems": [
+        {
+          "lineItem": "L1",
+          "lineItemDescription": "Wireless keyboard",
+          "lineItemCategory": "Hardware",
+          "businessName": "Sample Vendor A",
+          "quantity": 4,
+          "unitPrice": 150.00,
+          "lineTotal": 600.00,
+          "convertedUnitPrice": 225.00,
+          "convertedLineTotal": 900.00,
+          "convertedCurrency": "AUD",
+          "status": "matched",
+          "matchedLedgerCategory": "Hardware",
+          "matchedLedgerItem": "Keyboard",
+          "ruleApplied": "R1",
+          "reason": "Converted unit price 225.00 AUD matches expected 225.00 AUD exactly.",
+          "humanInLoop": false
+        },
+        {
+          "lineItem": "L2",
+          "lineItemDescription": "USB-C dock",
+          "lineItemCategory": "Hardware",
+          "businessName": "Sample Vendor A",
+          "quantity": 2,
+          "unitPrice": 200.00,
+          "lineTotal": 400.00,
+          "convertedUnitPrice": 300.00,
+          "convertedLineTotal": 600.00,
+          "convertedCurrency": "AUD",
+          "status": "review",
+          "matchedLedgerCategory": "Hardware",
+          "matchedLedgerItem": "Docking Station",
+          "ruleApplied": "R3",
+          "reason": "Converted unit price 300.00 AUD outside tolerance of expected 250.00 AUD.",
+          "humanInLoop": true
+        }
+      ],
+      "exceptions": [
+        {
+          "lineItem": "L3",
+          "lineItemDescription": "On-site setup",
+          "lineItemCategory": "Services",
+          "businessName": "Sample Vendor A",
+          "quantity": 1,
+          "unitPrice": 234.56,
+          "lineTotal": 234.56,
+          "convertedUnitPrice": 351.84,
+          "convertedLineTotal": 351.84,
+          "convertedCurrency": "AUD",
+          "status": "exception",
+          "matchedLedgerCategory": null,
+          "matchedLedgerItem": null,
+          "ruleApplied": "R6",
+          "reason": "Category 'Services' not found in approved ledger.",
+          "humanInLoop": false
+        }
+      ],
+      "postedEntries": [
+        {
+          "entryId": "INV-1001-L1",
+          "invoiceId": "INV-1001",
+          "vendorName": "Sample Vendor A",
+          "ledgerCode": "HW-100",
+          "category": "Hardware",
+          "item": "Keyboard",
+          "amount": 900.00,
+          "currency": "AUD",
+          "postedDate": "2026-05-10",
+          "status": "posted"
+        }
+      ]
+    }
+  ]
+}

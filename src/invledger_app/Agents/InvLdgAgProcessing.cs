@@ -13,52 +13,117 @@ public class InvLdgAgProcessing : BaseAgent
 
     private static string GetInstructions() => """
         You are a processing agent. You receive a JSON payload containing:
-          - "invoices": one or more invoices (each with categories and line items)
-          - "ledger":   the approved general ledger (categories with items and aliases)
-          - "rules":    the matching rules (R1..R6)
+          - the upstream ingestion + invoice envelope: "ingestionStatus", "reason", "email",
+            and "invoices" (each invoice carrying fileName, blobUrl, invoiceId, vendorName,
+            vendorEmail, invoiceDate, dueDate, paymentTerms, currency, totalAmount, audTotalAmount,
+            documentType, extractionStatus, extractionNotes, categories[] with nested lineItems[],
+            and a flat invoice-level lineItems[])
+          - "ledger": the approved general ledger (categories with items and aliases)
+          - "rules":  the matching rules (R1..R6)
+
+        The approved ledger is denominated in AUD. All rule comparisons against ledger
+        expected prices and thresholds MUST be performed using AUD (converted) values.
 
         For each invoice:
           1. Call the fx_convert MCP tool to convert the invoice totalAmount from its currency to AUD,
-             passing invoiceDate as the invoiceDate parameter.
+             passing invoiceDate as the invoiceDate parameter. Use the same exchange rate to convert
+             every line item's unitPrice and lineTotal to AUD (convertedUnitPrice and convertedLineTotal).
+             If the invoice currency is already AUD, exchangeRate is 1 and converted values equal the originals.
           2. For every line item across all categories, classify it against the ledger using the rules
-             (case-insensitive name/alias match; substring match is acceptable):
+             (case-insensitive name/alias match; substring match is acceptable). Use convertedLineTotal
+             and convertedUnitPrice (AUD) when applying R1..R4:
                - R6 (exception): invoice category is not in the ledger.
                - R5 (exception): category exists but no ledger item matches the description.
-               - R4 (review):   lineTotal exceeds R4.thresholdAmount.
-               - R1 (matched):  exact unit price match (|diff| < 0.01).
-               - R2 (matched):  unit price within max(R2.tolerancePercent%, R2.toleranceAbsolute) of expected.
-               - R3 (review):   unit price outside R2 tolerance.
-          3. Produce one output invoice with this exact shape:
+               - R4 (review):   convertedLineTotal exceeds R4.thresholdAmount (AUD).
+               - R1 (matched):  exact unit price match (|convertedUnitPrice - expectedUnitPrice| < 0.01).
+               - R2 (matched):  convertedUnitPrice within max(R2.tolerancePercent%, R2.toleranceAbsolute) of expected.
+               - R3 (review):   convertedUnitPrice outside R2 tolerance.
+          3. Preserve every upstream field on the invoice unchanged, and append the processing
+             fields described in the schema below.
+
+        Return a single JSON object that exactly matches this schema. Include every field for every
+        item. Use null when a value is unknown. No text outside the JSON.
 
         {
-          "invoiceId": "<invoiceId>",
-          "businessName": "<vendorName>",
-          "fromDate": "<invoiceDate>",
-          "toDate": "<dueDate or empty string>",
-          "originalInvoiceAmount": <totalAmount>,
-          "originalInvoiceCurrency": "<currency>",
-          "exchangeRate": <rate from fx_convert>,
-          "convertedInvoiceAmount": <convertedAmount from fx_convert>,
-          "lineItems":  [ <items with status "matched" or "review"> ],
-          "exceptions": [ <items with status "exception"> ],
-          "postedEntries": [ <one entry per matched line item, see shape below> ]
+          "ingestionStatus": "accepted" | "rejected",
+          "reason": "brief explanation carried over from ingestion",
+          "email": {
+            "id": 0,
+            "from": "sender email address",
+            "fromName": "sender display name",
+            "to": "recipient email address",
+            "subject": "email subject",
+            "date": "YYYY-MM-DD",
+            "preview": "short preview text",
+            "attachmentCount": 0
+          },
+          "invoices": [
+            {
+              "fileName": "attachment file name",
+              "blobUrl": "attachment blob URL",
+              "invoiceId": "vendor invoice number",
+              "vendorName": "vendor legal name",
+              "vendorEmail": "vendor billing email",
+              "invoiceDate": "YYYY-MM-DD",
+              "dueDate": "YYYY-MM-DD",
+              "paymentTerms": "e.g. Net 30",
+              "currency": "ISO 4217 code, e.g. USD",
+              "totalAmount": 0.00,
+              "audTotalAmount": 0.00,
+              "documentType": "invoice" | "statement" | "reminder" | "other",
+              "extractionStatus": "ok" | "failed",
+              "extractionNotes": "short notes on extraction quality or null",
+              "categories": [
+                {
+                  "categoryName": "category label from the invoice",
+                  "categoryTotal": 0.00,
+                  "audCategoryTotal": 0.00,
+                  "lineItems": [
+                    {
+                      "categoryName": "matching category label",
+                      "description": "line item description",
+                      "quantity": 0,
+                      "unitPrice": 0.00,
+                      "lineTotal": 0.00,
+                      "audLineTotal": 0.00
+                    }
+                  ]
+                }
+              ],
+
+              "businessName": "<vendorName>",
+              "fromDate": "<invoiceDate>",
+              "toDate": "<dueDate or empty string>",
+              "invoiceAmount": "<totalAmount>",
+              "invoiceCurrency": "<currency>",
+              "exchangeRate": 0.00,
+              "convertedInvoiceAmount": 0.00,
+              "convertedInvoiceCurrency": "AUD",
+              "lineItems":  [ "<classified items with status 'matched' or 'review'>" ],
+              "exceptions": [ "<classified items with status 'exception'>" ],
+              "postedEntries": [ "<one entry per matched line item>" ]
+            }
+          ]
         }
 
-        Each item (in both lineItems and exceptions) uses this shape:
+        Each classified item (in both lineItems and exceptions) uses this shape:
         {
           "lineItem": "<lineItemId>",
           "lineItemDescription": "<description>",
           "lineItemCategory": "<categoryName>",
           "businessName": "<vendorName>",
-          "quantity": <quantity>,
-          "unitPrice": <unitPrice>,
-          "lineTotal": <lineTotal>,
+          "quantity": 0,
+          "unitPrice": 0.00,
+          "lineTotal": 0.00,
+          "convertedUnitPrice": 0.00,
+          "convertedLineTotal": 0.00,
+          "convertedCurrency": "AUD",
           "status": "matched" | "review" | "exception",
           "matchedLedgerCategory": "<ledger categoryName or null>",
           "matchedLedgerItem": "<ledger itemName or null>",
-          "ruleApplied": "<R1..R6>",
-          "reason": "<short explanation>",
-          "humanInLoop": <true for review, false otherwise>
+          "ruleApplied": "R1" | "R2" | "R3" | "R4" | "R5" | "R6",
+          "reason": "<short explanation; reference converted AUD values for R1..R4>",
+          "humanInLoop": true | false
         }
 
         Each posted entry uses this shape (only emit one for each line item whose status is
@@ -70,13 +135,10 @@ public class InvLdgAgProcessing : BaseAgent
           "ledgerCode": "<ledgerCode of the matched ledger category>",
           "category": "<matchedLedgerCategory>",
           "item": "<matchedLedgerItem>",
-          "amount": <lineTotal>,
-          "currency": "<invoice currency>",
+          "amount": 0.00,
+          "currency": "AUD",
           "postedDate": "<invoiceDate>",
           "status": "posted"
         }
-
-        Return a single JSON object: { "invoices": [ <processed invoice>, ... ] }.
-        No text outside the JSON.
         """;
 }
