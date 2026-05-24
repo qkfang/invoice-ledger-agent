@@ -22,24 +22,27 @@ public class InvLdgAgProcessing : BaseAgent
           - "rules":  the matching rules (R1..R6)
 
         The approved ledger is denominated in AUD. All rule comparisons against ledger
-        expected prices and thresholds MUST be performed using AUD (converted) values.
+        expected prices and thresholds MUST be performed using AUD values that the upstream
+        invoice agent already produced (audTotalAmount, audCategoryTotal, audLineTotal,
+        exchangeRate, convertedInvoiceAmount). Do NOT call fx_convert and do NOT recompute
+        any of these values; trust the upstream values and copy them through unchanged.
 
         For each invoice:
-          1. Call the fx_convert MCP tool to convert the invoice totalAmount from its currency to AUD,
-             passing invoiceDate as the invoiceDate parameter. Use the same exchange rate to convert
-             every line item's unitPrice and lineTotal to AUD (convertedUnitPrice and convertedLineTotal).
-             If the invoice currency is already AUD, exchangeRate is 1 and converted values equal the originals.
-          2. For every line item across all categories, classify it against the ledger using the rules
-             (case-insensitive name/alias match; substring match is acceptable). Use convertedLineTotal
-             and convertedUnitPrice (AUD) when applying R1..R4:
+          1. For every line item across all categories, classify it against the ledger using the rules
+             (case-insensitive name/alias match; substring match is acceptable). Derive each line item's
+             AUD unit price as convertedUnitPrice = unitPrice * exchangeRate (use upstream exchangeRate)
+             and use audLineTotal (as convertedLineTotal) and convertedUnitPrice when applying R1..R4:
                - R6 (exception): invoice category is not in the ledger.
                - R5 (exception): category exists but no ledger item matches the description.
                - R4 (review):   convertedLineTotal exceeds R4.thresholdAmount (AUD).
                - R1 (matched):  exact unit price match (|convertedUnitPrice - expectedUnitPrice| < 0.01).
                - R2 (matched):  convertedUnitPrice within max(R2.tolerancePercent%, R2.toleranceAbsolute) of expected.
                - R3 (review):   convertedUnitPrice outside R2 tolerance.
-          3. Preserve every upstream field on the invoice unchanged. Do not remove, rename,
-             or repurpose upstream fields. Append only new processing fields described below.
+          2. Preserve every upstream field on the invoice unchanged. Do not remove, rename,
+             recompute, or repurpose any upstream field (including businessName, fromDate, toDate,
+             invoiceAmount, invoiceCurrency, exchangeRate, convertedInvoiceAmount,
+             convertedInvoiceCurrency, and all aud* values). Append only the new processing fields
+             described below.
 
         Return a single JSON object that exactly matches this schema. Include every field for every
         item. Use null when a value is unknown. No text outside the JSON.
@@ -74,14 +77,14 @@ public class InvLdgAgProcessing : BaseAgent
               "extractionStatus": "ok" | "failed",
               "extractionNotes": "short notes on extraction quality or null",
 
-              "businessName": "<vendorName>",
-              "fromDate": "<invoiceDate>",
-              "toDate": "<dueDate or empty string>",
-              "invoiceAmount": "<totalAmount>",
-              "invoiceCurrency": "<currency>",
-              "exchangeRate": 0.00,
-              "convertedInvoiceAmount": 0.00,
-              "convertedInvoiceCurrency": "AUD",
+              "businessName": "<carry-through from invoice agent>",
+              "fromDate": "<carry-through from invoice agent>",
+              "toDate": "<carry-through from invoice agent>",
+              "invoiceAmount": "<carry-through from invoice agent>",
+              "invoiceCurrency": "<carry-through from invoice agent>",
+              "exchangeRate": "<carry-through from invoice agent>",
+              "convertedInvoiceAmount": "<carry-through from invoice agent>",
+              "convertedInvoiceCurrency": "<carry-through from invoice agent>",
 
               "categories": [
                 {

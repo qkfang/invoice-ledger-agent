@@ -9,7 +9,10 @@
     "subject": "Invoice INV-2026-0004 - May Services",
     "date": "2026-05-16",
     "preview": "Please find attached your May invoice.",
-    "attachmentCount": 1
+    "body": "Dear Accounts Payable Team,\n\nPlease find attached your May invoice for services rendered.\n\nRegards,\nSample Vendor",
+    "attachments": [
+      { "name": "sample-may.pdf", "blobUrl": "https://example.blob.core.windows.net/invoices/sample-may.pdf", "invoiceId": "INV-2026-0004" }
+    ]
   },
   "invoices": [
     {

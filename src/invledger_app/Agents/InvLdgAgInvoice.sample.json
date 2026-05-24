@@ -9,7 +9,10 @@
     "subject": "Invoice INV-1001 - May Services",
     "date": "2026-05-10",
     "preview": "Please find attached your May invoice.",
-    "attachmentCount": 1
+    "body": "Dear Accounts Payable Team,\n\nPlease find attached your May invoice for services rendered.\n\nRegards,\nSample Vendor",
+    "attachments": [
+      { "name": "invoice-1001.pdf", "blobUrl": "https://example.blob.core.windows.net/invoices/invoice-1001.pdf", "invoiceId": "INV-1001" }
+    ]
   },
   "invoices": [
     {
@@ -27,6 +30,14 @@
       "documentType": "invoice",
       "extractionStatus": "ok",
       "extractionNotes": null,
+      "businessName": "Sample Vendor A",
+      "fromDate": "2026-05-10",
+      "toDate": "2026-06-09",
+      "invoiceAmount": 1234.56,
+      "invoiceCurrency": "USD",
+      "exchangeRate": 1.50,
+      "convertedInvoiceAmount": 1851.84,
+      "convertedInvoiceCurrency": "AUD",
       "categories": [
         {
           "categoryName": "Hardware",

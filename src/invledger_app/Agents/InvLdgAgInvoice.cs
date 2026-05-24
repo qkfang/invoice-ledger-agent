@@ -35,6 +35,16 @@ public class InvLdgAgInvoice : BaseAgent
                - each lineTotal → audLineTotal (in both nested and flat lineItems)
              If the invoice currency is already AUD, set each aud* field equal to the original amount.
              If no exchange rate is available, set the aud* fields to null.
+             Capture the exchange rate used (AUD per 1 unit of invoice currency) and emit the following
+             descriptive fields on each invoice (these duplicate canonical fields for downstream display):
+               - businessName            = vendorName
+               - fromDate                = invoiceDate
+               - toDate                  = dueDate (or empty string if unknown)
+               - invoiceAmount           = totalAmount
+               - invoiceCurrency         = currency
+               - exchangeRate            = the rate used for conversion (1 when currency is AUD; null if unavailable)
+               - convertedInvoiceAmount  = audTotalAmount
+               - convertedInvoiceCurrency = "AUD"
           6. Preserve the email envelope and the top-level "ingestionStatus" and "reason" fields
              from the ingestion input unchanged.
 
@@ -52,7 +62,10 @@ public class InvLdgAgInvoice : BaseAgent
             "subject": "email subject",
             "date": "YYYY-MM-DD",
             "preview": "short preview text",
-            "attachmentCount": 0
+            "body": "full email body text as received",
+            "attachments": [
+              { "name": "attachment file name", "blobUrl": "attachment blob URL", "invoiceId": "vendor invoice number or null" }
+            ]
           },
           "invoices": [
             {
@@ -70,6 +83,14 @@ public class InvLdgAgInvoice : BaseAgent
               "documentType": "invoice" | "statement" | "reminder" | "other",
               "extractionStatus": "ok" | "failed",
               "extractionNotes": "short notes on extraction quality or null",
+              "businessName": "<vendorName>",
+              "fromDate": "<invoiceDate>",
+              "toDate": "<dueDate or empty string>",
+              "invoiceAmount": 0.00,
+              "invoiceCurrency": "ISO 4217 code, e.g. USD",
+              "exchangeRate": 0.00,
+              "convertedInvoiceAmount": 0.00,
+              "convertedInvoiceCurrency": "AUD",
               "categories": [
                 {
                   "categoryName": "category label from the invoice",
