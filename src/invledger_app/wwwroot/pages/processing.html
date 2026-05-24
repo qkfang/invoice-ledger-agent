@@ -72,6 +72,8 @@
     });
 
     let invoices = [];
+    let ledgerMatchedAll = [];
+    let ledgerExceptionAll = [];
     let currentRunName = null;
 
     function setRunLoading(loading) {
@@ -81,7 +83,9 @@
     }
 
     function renderCachedRun(cached) {
-      // processing.json now holds the parsed agent JSON directly (no input/response wrapper).
+      // result.json holds invoices[] plus top-level LedgerMatched / LedgerException arrays.
+      ledgerMatchedAll = Array.isArray(cached?.LedgerMatched) ? cached.LedgerMatched : [];
+      ledgerExceptionAll = Array.isArray(cached?.LedgerException) ? cached.LedgerException : [];
       const list = Array.isArray(cached?.invoices) ? cached.invoices
                  : Array.isArray(cached) ? cached
                  : (cached && cached.invoiceId ? [cached] : null);
@@ -124,7 +128,8 @@
     }
 
     function renderResultHtml(result) {
-      const matchedRecords = result.matchedRecords || result.lineItems || [];
+      const matchedRecords = ledgerMatchedAll.filter(x => x.invoiceId === result.invoiceId);
+      const exceptionRecords = ledgerExceptionAll.filter(x => x.invoiceId === result.invoiceId);
       const invoiceCurrency = result.invoiceCurrency || result.currency;
       const header = `
         <div class="summary-row">
@@ -135,7 +140,7 @@
           <div class="summary-pill"><div class="n">${esc(result.exchangeRate)}</div><div class="l">Exchange Rate</div></div>
           <div class="summary-pill"><div class="n">${fmtMoney(result.convertedInvoiceAmount, result.convertedInvoiceCurrency || 'AUD')}</div><div class="l">Converted (${esc(result.convertedInvoiceCurrency || 'AUD')})</div></div>
           <div class="summary-pill"><div class="n">${matchedRecords.length}</div><div class="l">Processable</div></div>
-          <div class="summary-pill"><div class="n">${(result.exceptions || []).length}</div><div class="l">Exceptions</div></div>
+          <div class="summary-pill"><div class="n">${exceptionRecords.length}</div><div class="l">Exceptions</div></div>
         </div>`;
 
       return `
@@ -144,7 +149,7 @@
         <h4 style="margin:14px 0 6px;font-size:0.85rem;">Processable line items</h4>
         ${renderItemsTable(matchedRecords, invoiceCurrency)}
         <h4 style="margin:14px 0 6px;font-size:0.85rem;">Exceptions</h4>
-        ${renderItemsTable(result.exceptions, invoiceCurrency)}`;
+        ${renderItemsTable(exceptionRecords, invoiceCurrency)}`;
     }
 
     function parseAgentJson(text) {
@@ -173,11 +178,10 @@
 
         const result = parseAgentJson(data.response);
         if (result) {
-          const list = Array.isArray(result.invoices) ? result.invoices
-                     : Array.isArray(result) ? result
-                     : [result];
+          ledgerMatchedAll = Array.isArray(result.LedgerMatched) ? result.LedgerMatched : [];
+          ledgerExceptionAll = Array.isArray(result.LedgerException) ? result.LedgerException : [];
           document.getElementById('result-area').innerHTML =
-            list.map(renderResultHtml).join('<hr style="margin:18px 0;border:none;border-top:1px solid var(--border);" />');
+            invoices.map(renderResultHtml).join('<hr style="margin:18px 0;border:none;border-top:1px solid var(--border);" />');
         } else {
           document.getElementById('result-area').innerHTML = `<pre>${esc(data.response)}</pre>`;
         }
@@ -196,6 +200,8 @@
         const runName = runSel.value;
         currentRunName = runName || null;
         invoices = [];
+        ledgerMatchedAll = [];
+        ledgerExceptionAll = [];
         document.getElementById('result-area').innerHTML = '<div class="empty">Run processing to see results.</div>';
         document.getElementById('input-area').innerHTML = '<div class="empty">No agent input yet.</div>';
         document.getElementById('output-area').innerHTML = '<div class="empty">No agent output yet.</div>';

@@ -275,15 +275,18 @@ public static class Endpoints
                 try { emailObj = JsonSerializer.Deserialize<JsonElement>(emailJson); } catch { emailObj = emailJson; }
             }
 
-            // Persist parsed invoice JSON so processing/exception/ledger tabs can reuse it.
+            // Merge the agent's {"invoices":[...]} node into result.json so downstream pages can reuse it.
             var match = System.Text.RegularExpressions.Regex.Match(response ?? string.Empty, @"\{[\s\S]*\}");
             if (match.Success)
             {
                 try
                 {
                     using var doc = JsonDocument.Parse(match.Value);
-                    var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
-                    await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "invoice.json", pretty);
+                    var nodes = new Dictionary<string, JsonElement>();
+                    if (doc.RootElement.TryGetProperty("invoices", out var invs))
+                        nodes["invoices"] = invs.Clone();
+                    if (nodes.Count > 0)
+                        await MergeIntoResultJsonAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, nodes);
                 }
                 catch (JsonException) { /* ignore parse failures */ }
             }
@@ -295,7 +298,7 @@ public static class Endpoints
         {
             var safeRun = Path.GetFileName(runName);
             if (string.IsNullOrEmpty(safeRun)) return Results.BadRequest();
-            var stream = localRunStorage.OpenRead(safeRun, "invoice.json");
+            var stream = localRunStorage.OpenRead(safeRun, "result.json");
             if (stream is null) return Results.NotFound(new { error = "Invoice not extracted yet. Run the invoice agent for this run first." });
             using var reader = new StreamReader(stream);
             var json = await reader.ReadToEndAsync();
@@ -349,7 +352,7 @@ public static class Endpoints
             var input = $"Process the following payload. Use fx_convert to convert each invoice totalAmount to AUD, then classify every line item against the ledger using the rules. Return JSON only.\n\n{{\n  \"invoices\": {request.Json},\n  \"ledger\": {ledgerJson},\n  \"rules\": {rulesJson}\n}}";
             var response = await processingAgent.RunAsync(input);
 
-            // Persist the parsed agent JSON as processing.json so the exception page can load it.
+            // Merge the agent's LedgerMatched / LedgerException nodes into result.json.
             if (!string.IsNullOrWhiteSpace(request.RunName))
             {
                 var safeRun = Path.GetFileName(request.RunName);
@@ -359,10 +362,15 @@ public static class Endpoints
                     try
                     {
                         using var doc = JsonDocument.Parse(match.Value);
-                        var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
-                        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "processing.json", pretty);
+                        var nodes = new Dictionary<string, JsonElement>();
+                        if (doc.RootElement.TryGetProperty("LedgerMatched", out var lm))
+                            nodes["LedgerMatched"] = lm.Clone();
+                        if (doc.RootElement.TryGetProperty("LedgerException", out var le))
+                            nodes["LedgerException"] = le.Clone();
+                        if (nodes.Count > 0)
+                            await MergeIntoResultJsonAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, nodes);
                     }
-                    catch (JsonException) { /* leave previous processing.json untouched on parse failure */ }
+                    catch (JsonException) { /* leave previous result.json untouched on parse failure */ }
                 }
 
                 // Persist raw agent input/output so the processing page can reload them.
@@ -377,7 +385,7 @@ public static class Endpoints
         });
 
         app.MapGet("/processing/runs/{runName}", async (string runName) =>
-            await ReadCachedRunResultAsync(localRunStorage, runName, "processing.json"));
+            await ReadCachedRunResultAsync(localRunStorage, runName, "result.json"));
 
         app.MapGet("/processing/runs/{runName}/agentinput", async (string runName) =>
             await ReadCachedRunResultAsync(localRunStorage, runName, "processing-agentinput.json"));
@@ -525,6 +533,8 @@ public static class Endpoints
 
             // Save ingestion.json to local temp, storage account, and Fabric Lakehouse.
             await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "ingestion.json", emailJson);
+            // Seed result.json with the ingestion content; later steps append nodes.
+            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "result.json", emailJson);
 
             var pdfFileNames = new List<string>();
             if (emailObj.TryGetProperty("attachments", out var attachments))
@@ -685,6 +695,7 @@ public static class Endpoints
             };
             var ingestionJson = JsonSerializer.Serialize(ingestionObj, new JsonSerializerOptions { WriteIndented = true });
             await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "ingestion.json", ingestionJson);
+            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "result.json", ingestionJson);
             savedFiles.Add("ingestion.json");
 
             var prompt = $"Process this email and extract invoice details from the attached document.\n\nEmail:\n{ingestionJson}\n\nPDF Documents (use extractDoc_DI tool for each URL):\n- {safeFileName}: {blobUrl}";
@@ -780,6 +791,45 @@ public static class Endpoints
                 logger.LogWarning(ex, "Fabric mirror failed for {Run}/{File}", Sanitize(safeRun), Sanitize(fileName));
             }
         }
+    }
+
+    // Loads the existing result.json (falling back to ingestion.json), overlays the supplied nodes,
+    // and writes result.json back via MirrorRunFileAsync.
+    private static async Task MergeIntoResultJsonAsync(LocalRunStorageService localRunStorage,
+        BlobStorageService blobStorage, FabricLakehouseService? fabricLakehouse, ILogger logger,
+        string runName, IDictionary<string, JsonElement> nodes)
+    {
+        var safeRun = Path.GetFileName(runName);
+        if (string.IsNullOrEmpty(safeRun)) return;
+
+        string? existing = null;
+        var stream = localRunStorage.OpenRead(safeRun, "result.json")
+                     ?? localRunStorage.OpenRead(safeRun, "ingestion.json");
+        if (stream is not null)
+        {
+            using var r = new StreamReader(stream);
+            existing = await r.ReadToEndAsync();
+        }
+
+        var merged = new Dictionary<string, JsonElement>();
+        if (!string.IsNullOrWhiteSpace(existing))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(existing);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                        merged[prop.Name] = prop.Value.Clone();
+                }
+            }
+            catch (JsonException) { /* start fresh on bad existing content */ }
+        }
+
+        foreach (var kv in nodes) merged[kv.Key] = kv.Value;
+
+        var pretty = JsonSerializer.Serialize(merged, new JsonSerializerOptions { WriteIndented = true });
+        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "result.json", pretty);
     }
 
     private static async Task CacheAgentResultAsync(LocalRunStorageService storage, string? runName, string fileName, string input, string? response)

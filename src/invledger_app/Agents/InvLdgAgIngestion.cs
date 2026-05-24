@@ -42,24 +42,7 @@ public class InvLdgAgIngestion : BaseAgent
                  "attachments": [
                    { "name": "attachment file name", "blobUrl": "attachment blob URL", "invoiceId": "vendor invoice number or null" }
                  ]
-               },
-               "invoices": [
-                 {
-                   "fileName": "attachment file name",
-                   "blobUrl": "attachment blob URL",
-                   "invoiceId": "vendor invoice number",
-                   "vendorName": "vendor legal name",
-                   "vendorEmail": "vendor billing email (use email.from when appropriate)",
-                   "invoiceDate": "YYYY-MM-DD",
-                   "dueDate": "YYYY-MM-DD",
-                   "paymentTerms": "e.g. Net 30",
-                   "currency": "ISO 4217 code, e.g. AUD",
-                   "totalAmount": 0.00,
-                   "documentType": "invoice" | "statement" | "reminder" | "other",
-                   "extractionStatus": "ok" | "failed",
-                   "extractionNotes": "short notes on extraction quality or null"
-                 }
-               ]
+               }
              }
         """;
 }

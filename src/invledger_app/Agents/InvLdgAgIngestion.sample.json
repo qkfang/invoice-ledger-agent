@@ -13,22 +13,5 @@
     "attachments": [
       { "name": "sample-may.pdf", "blobUrl": "https://example.blob.core.windows.net/invoices/sample-may.pdf", "invoiceId": "INV-2026-0004" }
     ]
-  },
-  "invoices": [
-    {
-      "fileName": "sample-may.pdf",
-      "blobUrl": "https://example.blob.core.windows.net/invoices/sample-may.pdf",
-      "invoiceId": "INV-2026-0004",
-      "vendorName": "Sample Vendor",
-      "vendorEmail": "billing@example.com",
-      "invoiceDate": "2026-05-16",
-      "dueDate": "2026-06-15",
-      "paymentTerms": "Net 30",
-      "currency": "USD",
-      "totalAmount": 48177.19,
-      "documentType": "invoice",
-      "extractionStatus": "ok",
-      "extractionNotes": null
-    }
-  ]
+  }
 }

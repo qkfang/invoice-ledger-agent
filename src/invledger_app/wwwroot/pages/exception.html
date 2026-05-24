@@ -142,21 +142,21 @@
           }
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
-          const list = Array.isArray(data?.invoices) ? data.invoices
-                     : Array.isArray(data) ? data
-                     : (data && data.invoiceId ? [data] : []);
-          for (const inv of list) {
-            for (const ex of (inv.exceptions || [])) {
-              allExceptions.push({
-                invoiceId: inv.invoiceId,
-                lineNo: ex.lineNo || ex.lineItem,
-                vendorName: inv.businessName || ex.businessName,
-                categoryName: ex.lineItemCategory,
-                description: ex.lineItemDescription,
-                lineTotal: ex.lineTotal,
-                reason: ex.reason
-              });
-            }
+          const ledgerExceptions = Array.isArray(data?.LedgerException) ? data.LedgerException : [];
+          const invList = Array.isArray(data?.invoices) ? data.invoices
+                        : (data && data.invoiceId ? [data] : []);
+          const businessByInvoice = {};
+          for (const inv of invList) businessByInvoice[inv.invoiceId] = inv.businessName || inv.vendorName;
+          for (const ex of ledgerExceptions) {
+            allExceptions.push({
+              invoiceId: ex.invoiceId,
+              lineNo: ex.lineNo || ex.lineItem,
+              vendorName: businessByInvoice[ex.invoiceId] || ex.businessName,
+              categoryName: ex.lineItemCategory,
+              description: ex.lineItemDescription,
+              lineTotal: ex.lineTotal,
+              reason: ex.reason
+            });
           }
           summary.textContent = `Loaded ${allExceptions.length} exception(s) from ${runName}.`;
           renderExceptions();
