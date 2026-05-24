@@ -99,6 +99,30 @@
     .invoice-card h4 { margin: 0 0 10px; font-size: 0.92rem; color: var(--text); }
     .invoice-items { margin-top: 8px; font-size: 0.82rem; color: #555; }
     .invoice-items li { margin-bottom: 3px; }
+
+    /* Upload doc modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: none; align-items: center; justify-content: center; z-index: 200;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 12px; padding: 24px 26px;
+      width: min(500px, 95vw); box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 0.78rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+    .btn-upload { background: #0369a1; color: #fff; border: none; border-radius: 6px; padding: 8px 18px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+    .btn-upload:hover:not(:disabled) { background: #0284c7; }
+    .btn-upload:disabled { background: #7dd3fc; cursor: not-allowed; }
+    .btn-upload-trigger {
+      background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd;
+      border-radius: 6px; padding: 5px 11px; font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+    }
+    .btn-upload-trigger:hover { background: #e0f2fe; }
   </style>
 </head>
 <body>
@@ -109,7 +133,10 @@
     <!-- Email Inbox (populated from scenarios) -->
     <div class="email-layout" id="email-layout">
       <div class="email-list" id="email-list">
-        <div class="email-list-header">📧 Inbox</div>
+        <div class="email-list-header">
+          📧 Inbox
+          <button class="btn-upload-trigger" id="btn-open-upload" style="float:right;margin-top:-2px;" title="Upload a PDF or image invoice">📤 Upload Doc</button>
+        </div>
         <div class="email-list-empty" id="email-list-body">Loading…</div>
       </div>
       <div class="email-detail" id="email-detail">
@@ -123,6 +150,25 @@
       <div id="process-result-area"></div>
     </div>
   </main>
+
+  <!-- Upload Doc Modal -->
+  <div class="modal-overlay" id="upload-modal">
+    <div class="modal-box">
+      <div class="modal-title">📤 Upload Invoice Document</div>
+      <div class="modal-field">
+        <label for="upload-file">PDF or Image File</label>
+        <input type="file" id="upload-file" accept=".pdf,.png,.jpg,.jpeg" style="width:100%;font-size:0.88rem;" />
+      </div>
+      <div class="modal-field">
+        <label for="upload-email-body">Email Body</label>
+        <textarea id="upload-email-body" rows="5" placeholder="Paste or type the email body describing this invoice…" style="width:100%;resize:vertical;min-height:100px;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="btn-cancel-upload" style="padding:8px 16px;font-size:0.88rem;">Cancel</button>
+        <button type="button" class="btn-upload" id="btn-submit-upload">⚙ Upload &amp; Process</button>
+      </div>
+    </div>
+  </div>
 
   <script src="../assets/app.js?v=20260523"></script>
   <script src="../assets/workflow.js?v=20260523"></script>
@@ -329,6 +375,73 @@
         document.getElementById('email-list-body').textContent = `Error: ${err.message}`;
       }
     })();
+
+    // Upload Doc modal
+    const uploadModal = document.getElementById('upload-modal');
+    document.getElementById('btn-open-upload').addEventListener('click', () => {
+      uploadModal.classList.add('open');
+    });
+    document.getElementById('btn-cancel-upload').addEventListener('click', () => {
+      uploadModal.classList.remove('open');
+    });
+    uploadModal.addEventListener('click', e => {
+      if (e.target === uploadModal) uploadModal.classList.remove('open');
+    });
+
+    document.getElementById('btn-submit-upload').addEventListener('click', async () => {
+      const fileInput = document.getElementById('upload-file');
+      const emailBody = document.getElementById('upload-email-body').value.trim();
+      if (!fileInput.files || !fileInput.files[0]) {
+        alert('Please select a PDF or image file.');
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit-upload');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Processing…';
+
+      try {
+        const fd = new FormData();
+        fd.append('file', fileInput.files[0]);
+        fd.append('emailBody', emailBody);
+
+        const res = await fetch('/ingestion/upload-doc', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+        uploadModal.classList.remove('open');
+        const uploadedName = fileInput.files[0].name;
+        fileInput.value = '';
+        document.getElementById('upload-email-body').value = '';
+
+        // Add to inbox list — remove placeholder if still present
+        const list = document.getElementById('email-list');
+        const placeholder = document.getElementById('email-list-body');
+        if (placeholder) placeholder.remove();
+        const item = document.createElement('div');
+        item.className = 'email-list-item active';
+        const preview = emailBody.replace(/\s+/g, ' ').trim().slice(0, 80);
+        item.innerHTML = `
+          <div class="email-list-from">Manual Upload</div>
+          <div class="email-list-subject">Uploaded: ${esc(uploadedName)}</div>
+          <div class="email-list-preview">${esc(preview) || '(no body)'}</div>`;
+        document.querySelectorAll('.email-list-item').forEach(el => el.classList.remove('active'));
+        list.appendChild(item);
+
+        // Show result
+        const resultCard = document.getElementById('process-result-card');
+        resultCard.style.display = '';
+        renderProcessResult(data);
+      } catch (err) {
+        const resultCard = document.getElementById('process-result-card');
+        resultCard.style.display = '';
+        document.getElementById('process-result-area').innerHTML =
+          `<div class="empty error" style="color:#991b1b;">Error: ${esc(err.message)}</div>`;
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '⚙ Upload &amp; Process';
+    });
   </script>
 </body>
 </html>
