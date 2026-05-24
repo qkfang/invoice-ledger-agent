@@ -250,8 +250,8 @@ public static class Endpoints
                         extractJson = result.Json;
                         extractMarkdown = result.Markdown;
                         var baseName = Path.GetFileNameWithoutExtension(name);
-                        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, $"{baseName}.extract.json", extractJson ?? string.Empty);
-                        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, $"{baseName}.extract.md", extractMarkdown ?? string.Empty);
+                        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, $"{baseName}.extract.json", extractJson ?? string.Empty, skipFabric: true);
+                        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, $"{baseName}.extract.md", extractMarkdown ?? string.Empty, skipFabric: true);
                     }
                 }
                 catch (Exception ex)
@@ -398,9 +398,9 @@ public static class Endpoints
                 // Persist raw agent input/output so the processing page can reload them.
                 var ioOpts = new JsonSerializerOptions { WriteIndented = true };
                 await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "processing-agentinput.json",
-                    JsonSerializer.Serialize(new { input }, ioOpts));
+                    JsonSerializer.Serialize(new { input }, ioOpts), skipFabric: true);
                 await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "processing-agentoutput.json",
-                    JsonSerializer.Serialize(new { output = response }, ioOpts));
+                    JsonSerializer.Serialize(new { output = response }, ioOpts), skipFabric: true);
             }
 
             return Results.Ok(new { input, response });
@@ -705,7 +705,7 @@ public static class Endpoints
                     processedAt = DateTime.UtcNow.ToString("o")
                 }, new JsonSerializerOptions { WriteIndented = true });
 
-                await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, extractedFileName, extractedContent);
+                await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, extractedFileName, extractedContent, skipFabric: true);
                 extractedFiles.Add(extractedFileName);
                 savedFiles.Add(extractedFileName);
 
@@ -876,7 +876,7 @@ public static class Endpoints
 
     private static async Task MirrorRunFileAsync(LocalRunStorageService localRunStorage,
         BlobStorageService blobStorage, FabricLakehouseService? fabricLakehouse, ILogger logger,
-        string runName, string fileName, string content)
+        string runName, string fileName, string content, bool skipFabric = false)
     {
         var safeRun = Path.GetFileName(runName);
         if (string.IsNullOrEmpty(safeRun)) return;
@@ -898,7 +898,7 @@ public static class Endpoints
         }
 
         // Fabric Lakehouse (tertiary).
-        if (fabricLakehouse is not null)
+        if (!skipFabric && fabricLakehouse is not null)
         {
             try
             {
