@@ -73,6 +73,16 @@ public class InvLdgAgProcessing : BaseAgent
               "documentType": "invoice" | "statement" | "reminder" | "other",
               "extractionStatus": "ok" | "failed",
               "extractionNotes": "short notes on extraction quality or null",
+
+              "businessName": "<vendorName>",
+              "fromDate": "<invoiceDate>",
+              "toDate": "<dueDate or empty string>",
+              "invoiceAmount": "<totalAmount>",
+              "invoiceCurrency": "<currency>",
+              "exchangeRate": 0.00,
+              "convertedInvoiceAmount": 0.00,
+              "convertedInvoiceCurrency": "AUD",
+
               "categories": [
                 {
                   "categoryName": "category label from the invoice",
@@ -90,15 +100,6 @@ public class InvLdgAgProcessing : BaseAgent
                   ]
                 }
               ],
-
-              "businessName": "<vendorName>",
-              "fromDate": "<invoiceDate>",
-              "toDate": "<dueDate or empty string>",
-              "invoiceAmount": "<totalAmount>",
-              "invoiceCurrency": "<currency>",
-              "exchangeRate": 0.00,
-              "convertedInvoiceAmount": 0.00,
-              "convertedInvoiceCurrency": "AUD",
               "lineItems":  [ "<classified items with status 'matched' or 'review'>" ],
               "exceptions": [ "<classified items with status 'exception'>" ],
               "postedEntries": [ "<one entry per matched line item>" ]
