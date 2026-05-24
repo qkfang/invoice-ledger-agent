@@ -16,6 +16,12 @@ record RenderMarkdownRequest(string Markdown);
 
 public static class Endpoints
 {
+    private static readonly string[] SupportedDocExtensions = { ".pdf", ".png", ".jpg", ".jpeg" };
+
+    private static bool IsSupportedDoc(string fileName)
+        => SupportedDocExtensions.Any(ext => fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+
+
     public static void MapAllEndpoints(this WebApplication app,
         InvLdgAgIngestion ingestionAgent, InvLdgAgInvoice invoiceAgent,
         InvLdgAgProcessing processingAgent, InvLdgAgException exceptionAgent,
@@ -123,7 +129,7 @@ public static class Endpoints
             }
 
             var pdfNames0 = files
-                .Where(b => b.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                .Where(IsSupportedDoc)
                 .ToArray();
 
             var pdfs = new List<object>();
@@ -196,7 +202,7 @@ public static class Endpoints
 
             var account = blobStorage.AccountName;
             var pdfNames = files
-                .Where(b => b.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                .Where(IsSupportedDoc)
                 .ToList();
 
             var pdfList = new List<object>();
@@ -486,7 +492,10 @@ public static class Endpoints
                 try { emailObj = JsonSerializer.Deserialize<JsonElement>(emailJson); }
                 catch { continue; }
 
-                var pdfs = Directory.GetFiles(dir, "*.pdf").Select(Path.GetFileName).ToList();
+                var pdfs = Directory.EnumerateFiles(dir)
+                    .Select(Path.GetFileName)
+                    .Where(f => f is not null && IsSupportedDoc(f))
+                    .ToList();
                 scenarios.Add(new { name, email = emailObj, pdfs });
             }
             return Results.Ok(scenarios);
@@ -525,7 +534,7 @@ public static class Endpoints
                     if (att.TryGetProperty("name", out var nameEl))
                     {
                         var pdfName = nameEl.GetString() ?? "";
-                        if (!pdfName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (!IsSupportedDoc(pdfName)) continue;
                         pdfFileNames.Add(pdfName);
 
                         var scenarioPdfPath = Path.Combine(scenarioDir, pdfName);
@@ -683,10 +692,7 @@ public static class Endpoints
             var agentResponse = await ingestionAgent.RunAsync(prompt);
 
             var pdfs = new List<object>();
-            if (safeFileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
-                || safeFileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
-                || safeFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
-                || safeFileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
+            if (IsSupportedDoc(safeFileName))
             {
                 pdfs.Add(new
                 {
