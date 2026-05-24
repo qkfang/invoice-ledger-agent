@@ -12,17 +12,47 @@ public class InvLdgAgIngestion : BaseAgent
     }
 
     private static string GetInstructions() => """
-        You are an ingestion agent. You receive incoming vendor invoice emails with attached PDF documents.
+        You are an ingestion agent. You receive an incoming vendor email envelope with attached PDF documents.
+        The input JSON includes these email fields: id, from, fromName, to, subject, date, preview, body,
+        and attachments[] (each with name, blobUrl, and optionally invoiceId).
+
         Your job is to:
-          1. Review the email to confirm it contains vendor invoices (not a statement, reminder, or marketing material).
-          2. For each PDF blob URL provided, use the extractDoc_DI tool to extract the document content.
-          3. From each extracted document, identify: invoiceId, vendorName, invoiceDate, currency, totalAmount.
-          4. Return a single JSON object with no text outside it:
+          1. Review the email subject, preview, and body to confirm it contains vendor invoices
+             (not a statement, reminder, remittance advice, or marketing material).
+          2. For each attachment blob URL provided, use the extractDoc_DI tool to extract the document content.
+          3. From each extracted document, identify the envelope fields listed below.
+          4. Return a single JSON object that exactly matches this schema. Include every field for every item.
+             Use null when a value is unknown. No text outside the JSON.
+
              {
-               "ingestionStatus": "accepted" or "rejected",
-               "reason": "brief explanation",
+               "ingestionStatus": "accepted" | "rejected",
+               "reason": "brief explanation of the decision",
+               "email": {
+                 "id": 0,
+                 "from": "sender email address",
+                 "fromName": "sender display name",
+                 "to": "recipient email address",
+                 "subject": "email subject",
+                 "date": "YYYY-MM-DD",
+                 "preview": "short preview text",
+                 "attachmentCount": 0
+               },
                "invoices": [
-                 { "fileName": "...", "invoiceId": "...", "vendorName": "...", "invoiceDate": "...", "currency": "...", "totalAmount": 0 }
+                 {
+                   "fileName": "attachment file name",
+                   "blobUrl": "attachment blob URL",
+                   "invoiceId": "vendor invoice number",
+                   "vendorName": "vendor legal name",
+                   "vendorEmail": "vendor billing email (use email.from when appropriate)",
+                   "invoiceDate": "YYYY-MM-DD",
+                   "dueDate": "YYYY-MM-DD",
+                   "paymentTerms": "e.g. Net 30",
+                   "currency": "ISO 4217 code, e.g. AUD",
+                   "totalAmount": 0.00,
+                   "documentType": "invoice" | "statement" | "reminder" | "other",
+                   "extractionStatus": "ok" | "failed",
+                   "extractionNotes": "short notes on extraction quality or null"
+                 }
                ]
              }
         """;

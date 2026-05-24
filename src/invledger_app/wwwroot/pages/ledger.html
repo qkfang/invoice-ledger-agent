@@ -70,7 +70,7 @@
     function renderLedger() {
       const invByCategory = {};
       for (const inv of invoices) {
-        const currency = inv.originalInvoiceCurrency || inv.currency;
+        const currency = inv.invoiceCurrency || inv.originalInvoiceCurrency || inv.currency;
         const invoiceId = inv.invoiceId;
         const items = [...(inv.lineItems || []), ...(inv.exceptions || [])];
         for (const li of items) {

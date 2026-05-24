@@ -1,5 +1,6 @@
 using InvLedgerAgent.Agents;
 using InvLedgerAgent.Services;
+using Markdig;
 using System.Text.Json;
 
 namespace InvLedgerAgent.Api;
@@ -11,6 +12,7 @@ record SendEmailRequest(string To, string Subject, string Body);
 record ProcessEmailRequest(string EmailJson, string AttachmentJson);
 record ProcessScenarioRequest(string ScenarioName);
 record RunFromStorageRequest(string RunName);
+record RenderMarkdownRequest(string Markdown);
 
 public static class Endpoints
 {
@@ -32,7 +34,19 @@ public static class Endpoints
             {
                 ingestionAgent, invoiceAgent, processingAgent, exceptionAgent, ledgerAgent
             };
-            return Results.Ok(agents.ToDictionary(a => a.AgentId, a => a.Instructions));
+           
+
+        var markdownPipeline = new MarkdownPipelineBuilder()
+            .UseAdvancedExtensions()
+            .UseSoftlineBreakAsHardlineBreak()
+            .Build();
+
+        app.MapPost("/markdown/render", (RenderMarkdownRequest request) =>
+        {
+            var md = request?.Markdown ?? string.Empty;
+            var html = Markdown.ToHtml(md, markdownPipeline);
+            return Results.Ok(new { html });
+        }); return Results.Ok(agents.ToDictionary(a => a.AgentId, a => a.Instructions));
         });
 
         app.MapPost("/ingestion/run", async (JsonRequest request) =>

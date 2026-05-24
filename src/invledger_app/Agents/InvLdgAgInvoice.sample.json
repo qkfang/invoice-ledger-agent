@@ -1,0 +1,98 @@
+{
+  "ingestionStatus": "accepted",
+  "reason": "Email body and attachment confirm a valid vendor invoice for the May service period.",
+  "email": {
+    "id": 4,
+    "from": "billing@example.com",
+    "fromName": "Sample Vendor",
+    "to": "ap@company.com",
+    "subject": "Invoice INV-1001 - May Services",
+    "date": "2026-05-10",
+    "preview": "Please find attached your May invoice.",
+    "attachmentCount": 1
+  },
+  "invoices": [
+    {
+      "fileName": "invoice-1001.pdf",
+      "blobUrl": "https://example.blob.core.windows.net/invoices/invoice-1001.pdf",
+      "invoiceId": "INV-1001",
+      "vendorName": "Sample Vendor A",
+      "vendorEmail": "billing@example.com",
+      "invoiceDate": "2026-05-10",
+      "dueDate": "2026-06-09",
+      "paymentTerms": "Net 30",
+      "currency": "USD",
+      "totalAmount": 1234.56,
+      "audTotalAmount": 1851.84,
+      "documentType": "invoice",
+      "extractionStatus": "ok",
+      "extractionNotes": null,
+      "categories": [
+        {
+          "categoryName": "Hardware",
+          "categoryTotal": 1000.00,
+          "audCategoryTotal": 1500.00,
+          "lineItems": [
+            {
+              "categoryName": "Hardware",
+              "description": "Wireless keyboard",
+              "quantity": 4,
+              "unitPrice": 150.00,
+              "lineTotal": 600.00,
+              "audLineTotal": 900.00
+            },
+            {
+              "categoryName": "Hardware",
+              "description": "USB-C dock",
+              "quantity": 2,
+              "unitPrice": 200.00,
+              "lineTotal": 400.00,
+              "audLineTotal": 600.00
+            }
+          ]
+        },
+        {
+          "categoryName": "Services",
+          "categoryTotal": 234.56,
+          "audCategoryTotal": 351.84,
+          "lineItems": [
+            {
+              "categoryName": "Services",
+              "description": "On-site setup",
+              "quantity": 1,
+              "unitPrice": 234.56,
+              "lineTotal": 234.56,
+              "audLineTotal": 351.84
+            }
+          ]
+        }
+      ],
+      "lineItems": [
+        {
+          "categoryName": "Hardware",
+          "description": "Wireless keyboard",
+          "quantity": 4,
+          "unitPrice": 150.00,
+          "lineTotal": 600.00,
+          "audLineTotal": 900.00
+        },
+        {
+          "categoryName": "Hardware",
+          "description": "USB-C dock",
+          "quantity": 2,
+          "unitPrice": 200.00,
+          "lineTotal": 400.00,
+          "audLineTotal": 600.00
+        },
+        {
+          "categoryName": "Services",
+          "description": "On-site setup",
+          "quantity": 1,
+          "unitPrice": 234.56,
+          "lineTotal": 234.56,
+          "audLineTotal": 351.84
+        }
+      ]
+    }
+  ]
+}

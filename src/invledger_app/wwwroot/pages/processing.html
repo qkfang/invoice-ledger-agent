@@ -95,6 +95,7 @@
 
     function renderItemsTable(items, currency) {
       if (!items || !items.length) return '<div class="empty">None.</div>';
+      const convCcy = 'AUD';
       const rows = items.map(r => `
         <tr>
           <td>${esc(r.lineItem)}</td>
@@ -104,6 +105,8 @@
           <td>${r.quantity != null ? r.quantity : '—'}</td>
           <td>${r.unitPrice != null ? fmtMoney(r.unitPrice, currency) : '—'}</td>
           <td>${r.lineTotal != null ? fmtMoney(r.lineTotal, currency) : '—'}</td>
+          <td>${r.convertedUnitPrice != null ? fmtMoney(r.convertedUnitPrice, r.convertedCurrency || convCcy) : '—'}</td>
+          <td>${r.convertedLineTotal != null ? fmtMoney(r.convertedLineTotal, r.convertedCurrency || convCcy) : '—'}</td>
           <td>${esc(r.status || '')}</td>
           <td><span class="rule-pill">${esc(r.ruleApplied || '')}</span></td>
           <td style="color:var(--muted);">${esc(r.reason || '')}</td>
@@ -113,6 +116,7 @@
           <thead><tr>
             <th>Line Item</th><th>Category</th><th>Description</th><th>Business</th>
             <th>Qty</th><th>Unit Price</th><th>Line Total</th>
+            <th>Conv. Unit Price</th><th>Conv. Line Total</th>
             <th>Status</th><th>Rule</th><th>Reason</th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -125,9 +129,9 @@
           <div class="summary-pill"><div class="n">${esc(result.businessName)}</div><div class="l">Business</div></div>
           <div class="summary-pill"><div class="n">${esc(result.fromDate)}</div><div class="l">From Date</div></div>
           <div class="summary-pill"><div class="n">${esc(result.toDate)}</div><div class="l">To Date</div></div>
-          <div class="summary-pill"><div class="n">${fmtMoney(result.originalInvoiceAmount, result.originalInvoiceCurrency)}</div><div class="l">Original Amount</div></div>
+          <div class="summary-pill"><div class="n">${fmtMoney(result.invoiceAmount, result.invoiceCurrency)}</div><div class="l">Invoice Amount</div></div>
           <div class="summary-pill"><div class="n">${esc(result.exchangeRate)}</div><div class="l">Exchange Rate</div></div>
-          <div class="summary-pill"><div class="n">${fmtMoney(result.convertedInvoiceAmount, 'AUD')}</div><div class="l">Converted (AUD)</div></div>
+          <div class="summary-pill"><div class="n">${fmtMoney(result.convertedInvoiceAmount, result.convertedInvoiceCurrency || 'AUD')}</div><div class="l">Converted (${esc(result.convertedInvoiceCurrency || 'AUD')})</div></div>
           <div class="summary-pill"><div class="n">${(result.lineItems || []).length}</div><div class="l">Processable</div></div>
           <div class="summary-pill"><div class="n">${(result.exceptions || []).length}</div><div class="l">Exceptions</div></div>
         </div>`;
@@ -136,9 +140,9 @@
         <h3 style="margin:4px 0 8px;font-size:0.95rem;">${esc(result.invoiceId || '')}</h3>
         ${header}
         <h4 style="margin:14px 0 6px;font-size:0.85rem;">Processable line items</h4>
-        ${renderItemsTable(result.lineItems, result.originalInvoiceCurrency)}
+        ${renderItemsTable(result.lineItems, result.invoiceCurrency)}
         <h4 style="margin:14px 0 6px;font-size:0.85rem;">Exceptions</h4>
-        ${renderItemsTable(result.exceptions, result.originalInvoiceCurrency)}`;
+        ${renderItemsTable(result.exceptions, result.invoiceCurrency)}`;
     }
 
     function parseAgentJson(text) {

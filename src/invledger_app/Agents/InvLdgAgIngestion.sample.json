@@ -1,0 +1,31 @@
+{
+  "ingestionStatus": "accepted",
+  "reason": "Email body and attachment confirm a valid vendor invoice for the May service period.",
+  "email": {
+    "id": 4,
+    "from": "billing@example.com",
+    "fromName": "Sample Vendor",
+    "to": "ap@company.com",
+    "subject": "Invoice INV-2026-0004 - May Services",
+    "date": "2026-05-16",
+    "preview": "Please find attached your May invoice.",
+    "attachmentCount": 1
+  },
+  "invoices": [
+    {
+      "fileName": "sample-may.pdf",
+      "blobUrl": "https://example.blob.core.windows.net/invoices/sample-may.pdf",
+      "invoiceId": "INV-2026-0004",
+      "vendorName": "Sample Vendor",
+      "vendorEmail": "billing@example.com",
+      "invoiceDate": "2026-05-16",
+      "dueDate": "2026-06-15",
+      "paymentTerms": "Net 30",
+      "currency": "USD",
+      "totalAmount": 48177.19,
+      "documentType": "invoice",
+      "extractionStatus": "ok",
+      "extractionNotes": null
+    }
+  ]
+}
