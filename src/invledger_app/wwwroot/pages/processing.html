@@ -98,7 +98,7 @@
       const convCcy = 'AUD';
       const rows = items.map(r => `
         <tr>
-          <td>${esc(r.lineItem)}</td>
+          <td>${esc(r.lineNo || r.lineItem)}</td>
           <td>${esc(r.lineItemCategory)}</td>
           <td>${esc(r.lineItemDescription)}</td>
           <td>${esc(r.businessName)}</td>
@@ -114,7 +114,7 @@
       return `
         <table class="data">
           <thead><tr>
-            <th>Line Item</th><th>Category</th><th>Description</th><th>Business</th>
+            <th>Line No</th><th>Category</th><th>Description</th><th>Business</th>
             <th>Qty</th><th>Unit Price</th><th>Line Total</th>
             <th>Conv. Unit Price</th><th>Conv. Line Total</th>
             <th>Status</th><th>Rule</th><th>Reason</th>
@@ -124,6 +124,8 @@
     }
 
     function renderResultHtml(result) {
+      const matchedRecords = result.matchedRecords || result.lineItems || [];
+      const invoiceCurrency = result.invoiceCurrency || result.currency;
       const header = `
         <div class="summary-row">
           <div class="summary-pill"><div class="n">${esc(result.businessName)}</div><div class="l">Business</div></div>
@@ -132,7 +134,7 @@
           <div class="summary-pill"><div class="n">${fmtMoney(result.invoiceAmount, result.invoiceCurrency)}</div><div class="l">Invoice Amount</div></div>
           <div class="summary-pill"><div class="n">${esc(result.exchangeRate)}</div><div class="l">Exchange Rate</div></div>
           <div class="summary-pill"><div class="n">${fmtMoney(result.convertedInvoiceAmount, result.convertedInvoiceCurrency || 'AUD')}</div><div class="l">Converted (${esc(result.convertedInvoiceCurrency || 'AUD')})</div></div>
-          <div class="summary-pill"><div class="n">${(result.lineItems || []).length}</div><div class="l">Processable</div></div>
+          <div class="summary-pill"><div class="n">${matchedRecords.length}</div><div class="l">Processable</div></div>
           <div class="summary-pill"><div class="n">${(result.exceptions || []).length}</div><div class="l">Exceptions</div></div>
         </div>`;
 
@@ -140,9 +142,9 @@
         <h3 style="margin:4px 0 8px;font-size:0.95rem;">${esc(result.invoiceId || '')}</h3>
         ${header}
         <h4 style="margin:14px 0 6px;font-size:0.85rem;">Processable line items</h4>
-        ${renderItemsTable(result.lineItems, result.invoiceCurrency)}
+        ${renderItemsTable(matchedRecords, invoiceCurrency)}
         <h4 style="margin:14px 0 6px;font-size:0.85rem;">Exceptions</h4>
-        ${renderItemsTable(result.exceptions, result.invoiceCurrency)}`;
+        ${renderItemsTable(result.exceptions, invoiceCurrency)}`;
     }
 
     function parseAgentJson(text) {

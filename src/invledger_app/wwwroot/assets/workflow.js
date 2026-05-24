@@ -114,7 +114,7 @@ function evaluateLineItem(invoice, category, lineItem, ledger, rules) {
     invoiceId: invoice.invoiceId,
     vendorName: invoice.vendorName,
     categoryName: category.categoryName,
-    lineItemId: lineItem.lineItemId,
+    lineItemId: lineItem.lineNo || lineItem.lineItemId,
     description: lineItem.description,
     quantity: lineItem.quantity,
     unitPrice: lineItem.unitPrice,

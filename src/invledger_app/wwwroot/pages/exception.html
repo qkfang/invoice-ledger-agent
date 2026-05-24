@@ -62,6 +62,7 @@
       const rows = allExceptions.map(e => `
         <tr>
           <td>${esc(e.invoiceId)}</td>
+          <td>${esc(e.lineNo)}</td>
           <td>${esc(e.vendorName)}</td>
           <td>${esc(e.categoryName)}</td>
           <td>${esc(e.description)}</td>
@@ -70,7 +71,7 @@
         </tr>`).join('');
       document.getElementById('exc-area').innerHTML = `
         <table class="data">
-          <thead><tr><th>Invoice</th><th>Vendor</th><th>Category</th><th>Description</th><th>Line Total</th><th>Reason</th></tr></thead>
+          <thead><tr><th>Invoice</th><th>Line No</th><th>Vendor</th><th>Category</th><th>Description</th><th>Line Total</th><th>Reason</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
     }
@@ -148,6 +149,7 @@
             for (const ex of (inv.exceptions || [])) {
               allExceptions.push({
                 invoiceId: inv.invoiceId,
+                lineNo: ex.lineNo || ex.lineItem,
                 vendorName: inv.businessName || ex.businessName,
                 categoryName: ex.lineItemCategory,
                 description: ex.lineItemDescription,
