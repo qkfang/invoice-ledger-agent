@@ -14,20 +14,21 @@ public class InvLdgAgProcessing : BaseAgent
     private static string GetInstructions() => """
         You are a processing agent. You receive a JSON payload containing:
           - "invoices": each with invoiceId, vendorName, currency, totalAmount, audTotalAmount,
-            exchangeRate, categories[] and a flat lineItems[] (each line has a unique lineNo within
-            its invoice and an audLineTotal already converted to AUD by the upstream invoice agent).
-          - "ledger": the approved general ledger (categories with items and aliases).
-          - "rules":  the matching rules (R1..R6).
+            exchangeRate, and a flat lineItems[] (each line has a unique lineNo within its invoice
+            and an audLineTotal already converted to AUD by the upstream invoice agent).
+          - "ledger": the approved general ledger (categories with items and aliases). The ledger
+            categories are organisational only — DO NOT match by category.
+          - "rules":  the dollar matching rules (R1..R5).
 
         The approved ledger is denominated in AUD. Do NOT call fx_convert and do NOT recompute any
         upstream value. Trust the upstream audLineTotal / exchangeRate. Derive each line's AUD unit
-        price as convertedUnitPrice = unitPrice * exchangeRate.
+        price as convertedUnitPrice = unitPrice * exchangeRate. All matching MUST be done using the
+        AUD-converted values against the ledger's AUD expectedUnitPrice.
 
-        For every line item across every invoice, classify it against the ledger using the rules
-        (case-insensitive name/alias match; substring acceptable) and convertedUnitPrice /
-        convertedLineTotal (=audLineTotal):
-            R6 (exception): invoice category is not in the ledger.
-            R5 (exception): category exists but no ledger item matches the description.
+        For every line item across every invoice, find the best ledger item by matching the line
+        item's description and the invoice's businessName (vendorName) against ledger itemName and
+        aliases (case-insensitive; substring acceptable). Then classify using the dollar rules:
+            R5 (exception): no ledger item matches the description / business.
             R4 (review):    convertedLineTotal exceeds R4.thresholdAmount (AUD).
             R1 (matched):   exact unit price match (|convertedUnitPrice - expectedUnitPrice| < 0.01).
             R2 (matched):   convertedUnitPrice within max(R2.tolerancePercent%, R2.toleranceAbsolute) of expected.
@@ -51,12 +52,10 @@ public class InvLdgAgProcessing : BaseAgent
               "lineTotal": 0.00,
               "convertedUnitPrice": 0.00,
               "convertedLineTotal": 0.00,
-              "convertedUnitPrice": 0.00,
-              "convertedLineTotal": 0.00,
               "convertedCurrency": "AUD",
               "status": "matched" | "review",
-              "matchedLedgerCategory": "<ledger categoryName or null>",
-              "matchedLedgerItem": "<ledger itemName or null>",
+              "matchedLedgerItem": "<ledger itemName>",
+              "ledgerCode": "<ledgerCode of the matched ledger item>",
               "ruleApplied": "R1" | "R2" | "R3" | "R4",
               "reason": "<short explanation referencing AUD values>",
               "humanInLoop": true | false
@@ -73,13 +72,11 @@ public class InvLdgAgProcessing : BaseAgent
               "lineTotal": 0.00,
               "convertedUnitPrice": 0.00,
               "convertedLineTotal": 0.00,
-              "convertedUnitPrice": 0.00,
-              "convertedLineTotal": 0.00,
               "convertedCurrency": "AUD",
               "status": "exception",
-              "matchedLedgerCategory": null,
               "matchedLedgerItem": null,
-              "ruleApplied": "R5" | "R6",
+              "ledgerCode": null,
+              "ruleApplied": "R5",
               "reason": "<short explanation>",
               "humanInLoop": false
             }

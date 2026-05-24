@@ -40,7 +40,8 @@ public static class Endpoints
             {
                 ingestionAgent, invoiceAgent, processingAgent, exceptionAgent, ledgerAgent
             };
-           
+            return Results.Ok(agents.ToDictionary(a => a.AgentId, a => a.Instructions));
+        });
 
         var markdownPipeline = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions()
@@ -52,7 +53,6 @@ public static class Endpoints
             var md = request?.Markdown ?? string.Empty;
             var html = Markdown.ToHtml(md, markdownPipeline);
             return Results.Ok(new { html });
-        }); return Results.Ok(agents.ToDictionary(a => a.AgentId, a => a.Instructions));
         });
 
         app.MapPost("/ingestion/run", async (JsonRequest request) =>
@@ -275,18 +275,25 @@ public static class Endpoints
                 try { emailObj = JsonSerializer.Deserialize<JsonElement>(emailJson); } catch { emailObj = emailJson; }
             }
 
-            // Merge the agent's {"invoices":[...]} node into result.json so downstream pages can reuse it.
+            // Save the invoice agent's full JSON output verbatim to invoice.json, and merge
+            // the "invoices" node into result.json so downstream pages can reuse it.
             var match = System.Text.RegularExpressions.Regex.Match(response ?? string.Empty, @"\{[\s\S]*\}");
             if (match.Success)
             {
                 try
                 {
                     using var doc = JsonDocument.Parse(match.Value);
-                    var nodes = new Dictionary<string, JsonElement>();
-                    if (doc.RootElement.TryGetProperty("invoices", out var invs))
-                        nodes["invoices"] = invs.Clone();
-                    if (nodes.Count > 0)
-                        await MergeIntoResultJsonAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, nodes);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+                        await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "invoice.json", pretty);
+
+                        var nodes = new Dictionary<string, JsonElement>();
+                        if (doc.RootElement.TryGetProperty("invoices", out var invs))
+                            nodes["invoices"] = invs.Clone();
+                        if (nodes.Count > 0)
+                            await MergeIntoResultJsonAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, nodes);
+                    }
                 }
                 catch (JsonException) { /* ignore parse failures */ }
             }
@@ -352,7 +359,8 @@ public static class Endpoints
             var input = $"Process the following payload. Use fx_convert to convert each invoice totalAmount to AUD, then classify every line item against the ledger using the rules. Return JSON only.\n\n{{\n  \"invoices\": {request.Json},\n  \"ledger\": {ledgerJson},\n  \"rules\": {rulesJson}\n}}";
             var response = await processingAgent.RunAsync(input);
 
-            // Merge the agent's LedgerMatched / LedgerException nodes into result.json.
+            // Save the processing agent's full JSON output verbatim to processing.json, and merge
+            // the LedgerMatched / LedgerException nodes into result.json.
             if (!string.IsNullOrWhiteSpace(request.RunName))
             {
                 var safeRun = Path.GetFileName(request.RunName);
@@ -362,13 +370,19 @@ public static class Endpoints
                     try
                     {
                         using var doc = JsonDocument.Parse(match.Value);
-                        var nodes = new Dictionary<string, JsonElement>();
-                        if (doc.RootElement.TryGetProperty("LedgerMatched", out var lm))
-                            nodes["LedgerMatched"] = lm.Clone();
-                        if (doc.RootElement.TryGetProperty("LedgerException", out var le))
-                            nodes["LedgerException"] = le.Clone();
-                        if (nodes.Count > 0)
-                            await MergeIntoResultJsonAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, nodes);
+                        if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                        {
+                            var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+                            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, "processing.json", pretty);
+
+                            var nodes = new Dictionary<string, JsonElement>();
+                            if (doc.RootElement.TryGetProperty("LedgerMatched", out var lm))
+                                nodes["LedgerMatched"] = lm.Clone();
+                            if (doc.RootElement.TryGetProperty("LedgerException", out var le))
+                                nodes["LedgerException"] = le.Clone();
+                            if (nodes.Count > 0)
+                                await MergeIntoResultJsonAsync(localRunStorage, blobStorage, fabricLakehouse, logger, safeRun, nodes);
+                        }
                     }
                     catch (JsonException) { /* leave previous result.json untouched on parse failure */ }
                 }
@@ -533,8 +547,12 @@ public static class Endpoints
 
             // Save ingestion.json to local temp, storage account, and Fabric Lakehouse.
             await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "ingestion.json", emailJson);
-            // Seed result.json with the ingestion content; later steps append nodes.
-            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "result.json", emailJson);
+            // Seed result.json with the email wrapped under "email"; later steps append nodes
+            // (the ingestion agent's envelope will overwrite this "email" entry).
+            var seedJson = JsonSerializer.Serialize(
+                new Dictionary<string, JsonElement> { ["email"] = emailObj },
+                new JsonSerializerOptions { WriteIndented = true });
+            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "result.json", seedJson);
 
             var pdfFileNames = new List<string>();
             if (emailObj.TryGetProperty("attachments", out var attachments))
@@ -595,13 +613,76 @@ public static class Endpoints
                 }
             }
 
-            var urlList = string.Join("\n", blobUrls.Select(kv => $"- {kv.Key}: {kv.Value}"));
-            var prompt = string.IsNullOrEmpty(urlList)
-                ? $"Process this email (no PDF attachments were found to extract):\n\n{emailJson}"
-                : $"Process this email and extract invoice details from each attached PDF.\n\nEmail:\n{emailJson}\n\nPDF Documents (use extractDoc_DI tool for each URL):\n{urlList}";
+            // Merge uploaded blob URLs into the email's attachments[] so the agent
+            // receives a single, complete envelope and can preserve it verbatim.
+            string mergedEmailJson = emailJson;
+            try
+            {
+                using var doc = JsonDocument.Parse(emailJson);
+                var root = doc.RootElement;
+                var mutable = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(root.GetRawText())!;
+                if (mutable.TryGetValue("attachments", out var attEl) && attEl.ValueKind == JsonValueKind.Array)
+                {
+                    var newAttachments = new List<Dictionary<string, object?>>();
+                    foreach (var att in attEl.EnumerateArray())
+                    {
+                        var attDict = new Dictionary<string, object?>();
+                        foreach (var prop in att.EnumerateObject())
+                            attDict[prop.Name] = JsonSerializer.Deserialize<object?>(prop.Value.GetRawText());
+                        if (attDict.TryGetValue("name", out var nameVal) && nameVal is JsonElement ne && ne.ValueKind == JsonValueKind.String)
+                        {
+                            var n = ne.GetString();
+                            if (!string.IsNullOrEmpty(n) && blobUrls.TryGetValue(n, out var url))
+                                attDict["blobUrl"] = url;
+                            else if (!attDict.ContainsKey("blobUrl"))
+                                attDict["blobUrl"] = null;
+                        }
+                        newAttachments.Add(attDict);
+                    }
+                    mutable["attachments"] = JsonSerializer.SerializeToElement(newAttachments);
+                }
+                mergedEmailJson = JsonSerializer.Serialize(mutable, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to merge blob URLs into email attachments; sending original email JSON");
+            }
+
+            var prompt = blobUrls.Count == 0
+                ? $"Process this email (no PDF attachments were found to extract):\n\n{mergedEmailJson}"
+                : $"Process this email and extract invoice envelope details from each attached PDF using the extractDoc_DI tool on each attachment's blobUrl.\n\nEmail:\n{mergedEmailJson}";
 
             logger.LogInformation("Process scenario: {Scenario}, {Count} PDF(s)", Sanitize(request.ScenarioName), pdfFileNames.Count);
             var agentResponse = await ingestionAgent.RunAsync(prompt);
+
+            // Persist the ingestion agent's full JSON output verbatim to ingestion.json,
+            // and merge every top-level node into result.json.
+            if (!string.IsNullOrWhiteSpace(agentResponse))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(agentResponse, @"\{[\s\S]*\}");
+                if (match.Success)
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(match.Value);
+                        if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                        {
+                            var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+                            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "ingestion.json", pretty);
+
+                            var nodes = new Dictionary<string, JsonElement>();
+                            foreach (var prop in doc.RootElement.EnumerateObject())
+                                nodes[prop.Name] = prop.Value.Clone();
+                            if (nodes.Count > 0)
+                                await MergeIntoResultJsonAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, nodes);
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        logger.LogWarning(ex, "Could not parse ingestion agent response as JSON; ingestion.json/result.json not updated");
+                    }
+                }
+            }
 
             var extractedFiles = new List<string>();
             var pdfs = new List<object>();
@@ -695,12 +776,42 @@ public static class Endpoints
             };
             var ingestionJson = JsonSerializer.Serialize(ingestionObj, new JsonSerializerOptions { WriteIndented = true });
             await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "ingestion.json", ingestionJson);
-            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "result.json", ingestionJson);
+            var seedResult = JsonSerializer.Serialize(new { email = ingestionObj }, new JsonSerializerOptions { WriteIndented = true });
+            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "result.json", seedResult);
             savedFiles.Add("ingestion.json");
 
             var prompt = $"Process this email and extract invoice details from the attached document.\n\nEmail:\n{ingestionJson}\n\nPDF Documents (use extractDoc_DI tool for each URL):\n- {safeFileName}: {blobUrl}";
             logger.LogInformation("Upload doc ingestion: {Run}, file={File}", Sanitize(runName), Sanitize(safeFileName));
             var agentResponse = await ingestionAgent.RunAsync(prompt);
+
+            // Persist the ingestion agent's full JSON output verbatim to ingestion.json,
+            // and merge every top-level node into result.json.
+            if (!string.IsNullOrWhiteSpace(agentResponse))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(agentResponse, @"\{[\s\S]*\}");
+                if (match.Success)
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(match.Value);
+                        if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                        {
+                            var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+                            await MirrorRunFileAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, "ingestion.json", pretty);
+
+                            var nodes = new Dictionary<string, JsonElement>();
+                            foreach (var prop in doc.RootElement.EnumerateObject())
+                                nodes[prop.Name] = prop.Value.Clone();
+                            if (nodes.Count > 0)
+                                await MergeIntoResultJsonAsync(localRunStorage, blobStorage, fabricLakehouse, logger, runName, nodes);
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        logger.LogWarning(ex, "Could not parse ingestion agent response as JSON; ingestion.json/result.json not updated");
+                    }
+                }
+            }
 
             var pdfs = new List<object>();
             if (IsSupportedDoc(safeFileName))

@@ -73,6 +73,7 @@
           "status": "matched",
           "matchedLedgerCategory": "Hardware",
           "matchedLedgerItem": "Keyboard",
+          "ledgerCode": "7001",
           "ruleApplied": "R1",
           "reason": "Converted unit price 225.00 AUD matches expected 225.00 AUD exactly.",
           "humanInLoop": false
@@ -92,6 +93,7 @@
           "status": "review",
           "matchedLedgerCategory": "Hardware",
           "matchedLedgerItem": "Docking Station",
+          "ledgerCode": "7002",
           "ruleApplied": "R3",
           "reason": "Converted unit price 300.00 AUD outside tolerance of expected 250.00 AUD.",
           "humanInLoop": true
@@ -113,6 +115,7 @@
           "status": "exception",
           "matchedLedgerCategory": null,
           "matchedLedgerItem": null,
+          "ledgerCode": null,
           "ruleApplied": "R6",
           "reason": "Category 'Services' not found in approved ledger.",
           "humanInLoop": false

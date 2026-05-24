@@ -55,12 +55,14 @@ The following tools are registered on the `invledger-mcp` server:
 ### `inv-ldg-ag-ingestion` — Ingestion
 - **File:** `Agents/InvLdgAgIngestion.cs`
 - **Tools:** `extractDoc_DI`.
-- **Role:** First touch on documents dropped into the inbox. Confirms the file is a
-  vendor invoice (not a statement, reminder, or marketing material), calls
-  `extractDoc_DI` on each blob URL, and extracts the envelope: `invoiceId`,
-  `vendorName`, `invoiceDate`, `currency`, `totalAmount`.
+- **Role:** First touch on an incoming vendor email envelope with PDF attachments.
+  Reviews the subject, preview, and body to confirm the message contains vendor
+  invoices (not a statement, reminder, remittance advice, or marketing material),
+  calls `extractDoc_DI` on each attachment blob URL to validate the document, and
+  preserves the email envelope (including `body` and `attachments[]` with `name`,
+  `blobUrl`, and `invoiceId`) exactly as received.
 - **Output:** JSON with `ingestionStatus` of `accepted` or `rejected`, a `reason`,
-  and an `invoices[]` array of envelope fields per file.
+  and the preserved `email` envelope object.
 
 ### `inv-ldg-ag-invoice` — Invoice Extraction
 - **File:** `Agents/InvLdgAgInvoice.cs`

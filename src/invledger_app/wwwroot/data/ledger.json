@@ -3,104 +3,120 @@
   "categories": [
     {
       "categoryName": "Market Data Terminals",
-      "ledgerCode": "7000",
-      "approvedBudget": 850000.00,
-      "ytdBalance": 312400.00,
+      "approvedBudget": 950000.00,
+      "ytdBalance": 342400.00,
       "items": [
-        { "itemName": "Bloomberg Terminal (per seat / month)", "expectedUnitPrice": 3600.00, "aliases": ["Bloomberg", "BBG Terminal", "Bloomberg Professional"] },
-        { "itemName": "Refinitiv Eikon (per seat / month)", "expectedUnitPrice": 2300.00, "aliases": ["Eikon", "LSEG Workspace", "Refinitiv"] },
-        { "itemName": "FactSet Workstation (per seat / month)", "expectedUnitPrice": 1750.00, "aliases": ["FactSet"] },
-        { "itemName": "S&P Capital IQ Pro (per seat / month)", "expectedUnitPrice": 1500.00, "aliases": ["CapIQ", "Capital IQ"] }
+        { "ledgerCode": "7001", "itemName": "Bloomberg Terminal (per seat / month)", "expectedUnitPrice": 5000.00, "aliases": ["Bloomberg", "BBG Terminal", "Bloomberg Professional", "Bloomberg Terminal License", "Bloomberg Terminal License – Standard Seat"] },
+        { "ledgerCode": "7002", "itemName": "Bloomberg Anywhere Mobile Access (per seat / month)", "expectedUnitPrice": 300.00, "aliases": ["Bloomberg Anywhere", "BBG Anywhere", "Bloomberg Mobile"] },
+        { "ledgerCode": "7003", "itemName": "Bloomberg Premium Support & SLA (24x7)", "expectedUnitPrice": 1200.00, "aliases": ["BBG Premium Support", "Bloomberg SLA"] },
+        { "ledgerCode": "7004", "itemName": "Refinitiv Eikon (per seat / month)", "expectedUnitPrice": 2300.00, "aliases": ["Eikon", "LSEG Workspace", "Refinitiv"] },
+        { "ledgerCode": "7005", "itemName": "FactSet Workstation (per seat / month)", "expectedUnitPrice": 3000.00, "aliases": ["FactSet", "FactSet Workstation License"] },
+        { "ledgerCode": "7006", "itemName": "FactSet Technical Support – Premium SLA", "expectedUnitPrice": 900.00, "aliases": ["FactSet Support", "FactSet Premium SLA"] },
+        { "ledgerCode": "7007", "itemName": "S&P Capital IQ Pro (per seat / month)", "expectedUnitPrice": 1500.00, "aliases": ["CapIQ", "Capital IQ"] }
       ]
     },
     {
       "categoryName": "Research & News Feeds",
-      "ledgerCode": "7100",
-      "approvedBudget": 220000.00,
-      "ytdBalance": 78650.00,
+      "approvedBudget": 320000.00,
+      "ytdBalance": 118650.00,
       "items": [
-        { "itemName": "Morningstar Direct (per seat / month)", "expectedUnitPrice": 1850.00, "aliases": ["Morningstar", "MStar Direct"] },
-        { "itemName": "Morningstar Equity Research Report", "expectedUnitPrice": 260.00, "aliases": ["MStar Research", "Equity Research Note"] },
-        { "itemName": "Bloomberg News Enterprise Feed (monthly)", "expectedUnitPrice": 4200.00, "aliases": ["BBG News", "Bloomberg News"] },
-        { "itemName": "Dow Jones Newswires (monthly)", "expectedUnitPrice": 1950.00, "aliases": ["Dow Jones", "WSJ Pro Newswire"] },
-        { "itemName": "ASX Company Announcements Feed (monthly)", "expectedUnitPrice": 850.00, "aliases": ["ASX Announcements"] }
+        { "ledgerCode": "7101", "itemName": "Morningstar Direct (per seat / month)", "expectedUnitPrice": 1850.00, "aliases": ["Morningstar", "MStar Direct"] },
+        { "ledgerCode": "7102", "itemName": "Morningstar Research – Australian Equities Coverage (monthly)", "expectedUnitPrice": 1400.00, "aliases": ["MStar Research AU", "Morningstar AU Equities", "Morningstar Australian Equities"] },
+        { "ledgerCode": "7103", "itemName": "Morningstar Data – Managed Funds Performance Feed AU (monthly)", "expectedUnitPrice": 1650.00, "aliases": ["MStar Managed Funds", "Morningstar Managed Funds Feed"] },
+        { "ledgerCode": "7104", "itemName": "Morningstar Premium Support & SLA", "expectedUnitPrice": 380.00, "aliases": ["Morningstar Support", "MStar Support"] },
+        { "ledgerCode": "7105", "itemName": "Morningstar Equity Research Report", "expectedUnitPrice": 260.00, "aliases": ["MStar Research", "Equity Research Note"] },
+        { "ledgerCode": "7106", "itemName": "Bloomberg News Enterprise Feed (monthly)", "expectedUnitPrice": 4200.00, "aliases": ["BBG News", "Bloomberg News"] },
+        { "ledgerCode": "7107", "itemName": "Bloomberg Data License – Reference Data Feed Tier 2 (monthly)", "expectedUnitPrice": 4200.00, "aliases": ["BBG Data License", "Bloomberg Reference Data", "Data License – Reference Data Feed"] },
+        { "ledgerCode": "7108", "itemName": "Bloomberg B-PIPE Managed Market Data Feed (monthly)", "expectedUnitPrice": 3800.00, "aliases": ["B-PIPE", "BPIPE", "Bloomberg BPIPE"] },
+        { "ledgerCode": "7109", "itemName": "FactSet Fundamentals Data Feed (monthly)", "expectedUnitPrice": 4500.00, "aliases": ["FactSet Fundamentals", "FDS Fundamentals", "Data Feed – Fundamentals"] },
+        { "ledgerCode": "7110", "itemName": "FactSet Estimates – Premium Data (monthly)", "expectedUnitPrice": 2100.00, "aliases": ["FactSet Estimates", "FDS Estimates"] },
+        { "ledgerCode": "7111", "itemName": "FactSet Mergers & Acquisitions Database (monthly)", "expectedUnitPrice": 1600.00, "aliases": ["FactSet M&A", "FDS M&A", "Mergers & Acquisitions Database"] },
+        { "ledgerCode": "7112", "itemName": "FactSet Ownership Data Module (monthly)", "expectedUnitPrice": 1400.00, "aliases": ["FactSet Ownership", "FDS Ownership", "Ownership Data Module"] },
+        { "ledgerCode": "7113", "itemName": "FactSet Quantitative Research – Alpha Testing (monthly)", "expectedUnitPrice": 2800.00, "aliases": ["FactSet Quant", "FDS Quant Research", "Quantitative Research – Alpha Testing"] },
+        { "ledgerCode": "7114", "itemName": "Dow Jones Newswires (monthly)", "expectedUnitPrice": 1950.00, "aliases": ["Dow Jones", "WSJ Pro Newswire"] },
+        { "ledgerCode": "7115", "itemName": "ASX Company Announcements Feed (monthly)", "expectedUnitPrice": 850.00, "aliases": ["ASX Announcements"] }
       ]
     },
     {
       "categoryName": "FX & Rates Data",
-      "ledgerCode": "7200",
       "approvedBudget": 180000.00,
       "ytdBalance": 64200.00,
       "items": [
-        { "itemName": "EBS Live FX Feed (monthly)", "expectedUnitPrice": 3800.00, "aliases": ["EBS", "EBS FX"] },
-        { "itemName": "Refinitiv Matching FX (monthly)", "expectedUnitPrice": 3500.00, "aliases": ["Refinitiv Matching", "FXall"] },
-        { "itemName": "WM/Refinitiv FX Benchmark Rates (monthly)", "expectedUnitPrice": 1600.00, "aliases": ["WM Reuters", "WMR Fix"] },
-        { "itemName": "CLS Settlement Data (monthly)", "expectedUnitPrice": 1200.00, "aliases": ["CLS"] },
-        { "itemName": "ICAP / TP ICAP Rates Feed (monthly)", "expectedUnitPrice": 2100.00, "aliases": ["TP ICAP", "ICAP Rates"] }
+        { "ledgerCode": "7201", "itemName": "EBS Live FX Feed (monthly)", "expectedUnitPrice": 3800.00, "aliases": ["EBS", "EBS FX"] },
+        { "ledgerCode": "7202", "itemName": "Refinitiv Matching FX (monthly)", "expectedUnitPrice": 3500.00, "aliases": ["Refinitiv Matching", "FXall"] },
+        { "ledgerCode": "7203", "itemName": "WM/Refinitiv FX Benchmark Rates (monthly)", "expectedUnitPrice": 1600.00, "aliases": ["WM Reuters", "WMR Fix"] },
+        { "ledgerCode": "7204", "itemName": "CLS Settlement Data (monthly)", "expectedUnitPrice": 1200.00, "aliases": ["CLS"] },
+        { "ledgerCode": "7205", "itemName": "ICAP / TP ICAP Rates Feed (monthly)", "expectedUnitPrice": 2100.00, "aliases": ["TP ICAP", "ICAP Rates"] }
       ]
     },
     {
       "categoryName": "Exchange & Market Access",
-      "ledgerCode": "7300",
       "approvedBudget": 420000.00,
       "ytdBalance": 168900.00,
       "items": [
-        { "itemName": "ASX Market Data Licence (monthly)", "expectedUnitPrice": 5200.00, "aliases": ["ASX Data", "ASX Licence"] },
-        { "itemName": "CBOE Australia Connectivity (monthly)", "expectedUnitPrice": 3100.00, "aliases": ["CBOE", "Chi-X"] },
-        { "itemName": "CME Globex Market Data (monthly)", "expectedUnitPrice": 4500.00, "aliases": ["CME", "Globex"] },
-        { "itemName": "ICE Futures Data Feed (monthly)", "expectedUnitPrice": 3900.00, "aliases": ["ICE Data", "ICE Futures"] },
-        { "itemName": "FIX Connectivity Port (monthly)", "expectedUnitPrice": 1200.00, "aliases": ["FIX Port"] },
-        { "itemName": "Clearing Fee (per trade)", "expectedUnitPrice": 0.85, "aliases": ["Clearing", "ASX Clear"] }
+        { "ledgerCode": "7301", "itemName": "ASX Market Data Licence (monthly)", "expectedUnitPrice": 5200.00, "aliases": ["ASX Data", "ASX Licence"] },
+        { "ledgerCode": "7302", "itemName": "CBOE Australia Connectivity (monthly)", "expectedUnitPrice": 3100.00, "aliases": ["CBOE", "Chi-X"] },
+        { "ledgerCode": "7303", "itemName": "CME Globex Market Data (monthly)", "expectedUnitPrice": 4500.00, "aliases": ["CME", "Globex"] },
+        { "ledgerCode": "7304", "itemName": "ICE Futures Data Feed (monthly)", "expectedUnitPrice": 3900.00, "aliases": ["ICE Data", "ICE Futures"] },
+        { "ledgerCode": "7305", "itemName": "FIX Connectivity Port (monthly)", "expectedUnitPrice": 1200.00, "aliases": ["FIX Port"] },
+        { "ledgerCode": "7306", "itemName": "Clearing Fee (per trade)", "expectedUnitPrice": 0.85, "aliases": ["Clearing", "ASX Clear"] }
       ]
     },
     {
       "categoryName": "Trading Technology",
-      "ledgerCode": "7400",
       "approvedBudget": 380000.00,
       "ytdBalance": 152300.00,
       "items": [
-        { "itemName": "Co-location Rack Space (monthly)", "expectedUnitPrice": 8500.00, "aliases": ["Colo", "Co-lo Cabinet"] },
-        { "itemName": "Low-Latency Cross-Connect (monthly)", "expectedUnitPrice": 950.00, "aliases": ["Cross Connect"] },
-        { "itemName": "OMS Platform Licence (per seat / month)", "expectedUnitPrice": 1400.00, "aliases": ["OMS", "Order Management"] },
-        { "itemName": "EMS Platform Licence (per seat / month)", "expectedUnitPrice": 1600.00, "aliases": ["EMS", "Execution Management"] },
-        { "itemName": "Algo Container Licence (per strategy / month)", "expectedUnitPrice": 2200.00, "aliases": ["Algo Licence", "Strategy Licence"] }
+        { "ledgerCode": "7401", "itemName": "Co-location Rack Space (monthly)", "expectedUnitPrice": 8500.00, "aliases": ["Colo", "Co-lo Cabinet"] },
+        { "ledgerCode": "7402", "itemName": "Low-Latency Cross-Connect (monthly)", "expectedUnitPrice": 950.00, "aliases": ["Cross Connect"] },
+        { "ledgerCode": "7403", "itemName": "OMS Platform Licence (per seat / month)", "expectedUnitPrice": 1400.00, "aliases": ["OMS", "Order Management"] },
+        { "ledgerCode": "7404", "itemName": "EMS Platform Licence (per seat / month)", "expectedUnitPrice": 1600.00, "aliases": ["EMS", "Execution Management"] },
+        { "ledgerCode": "7405", "itemName": "Algo Container Licence (per strategy / month)", "expectedUnitPrice": 2200.00, "aliases": ["Algo Licence", "Strategy Licence"] }
       ]
     },
     {
       "categoryName": "Risk & Analytics",
-      "ledgerCode": "7500",
-      "approvedBudget": 260000.00,
-      "ytdBalance": 91500.00,
+      "approvedBudget": 320000.00,
+      "ytdBalance": 121500.00,
       "items": [
-        { "itemName": "MSCI RiskMetrics (monthly)", "expectedUnitPrice": 4800.00, "aliases": ["RiskMetrics", "MSCI Risk"] },
-        { "itemName": "Bloomberg PORT Analytics (per seat / month)", "expectedUnitPrice": 1200.00, "aliases": ["PORT", "Bloomberg PORT"] },
-        { "itemName": "Numerix Pricing Library (monthly)", "expectedUnitPrice": 5200.00, "aliases": ["Numerix"] },
-        { "itemName": "Axioma Portfolio Risk (monthly)", "expectedUnitPrice": 3600.00, "aliases": ["Axioma"] }
+        { "ledgerCode": "7501", "itemName": "MSCI RiskMetrics (monthly)", "expectedUnitPrice": 4800.00, "aliases": ["RiskMetrics", "MSCI Risk"] },
+        { "ledgerCode": "7502", "itemName": "Bloomberg PORT Enterprise – Portfolio & Risk Analytics (monthly)", "expectedUnitPrice": 2500.00, "aliases": ["PORT", "Bloomberg PORT", "PORT Enterprise"] },
+        { "ledgerCode": "7503", "itemName": "Bloomberg AIM – Asset & Investment Manager (monthly)", "expectedUnitPrice": 3200.00, "aliases": ["AIM", "Bloomberg AIM"] },
+        { "ledgerCode": "7504", "itemName": "Bloomberg MARS Multi-Asset Risk System Module (monthly)", "expectedUnitPrice": 2100.00, "aliases": ["MARS", "Bloomberg MARS"] },
+        { "ledgerCode": "7505", "itemName": "FactSet Portfolio Analytics Module (monthly)", "expectedUnitPrice": 3200.00, "aliases": ["FactSet PA", "FDS Portfolio Analytics", "Portfolio Analytics Module"] },
+        { "ledgerCode": "7506", "itemName": "FactSet Risk Models Add-on (monthly)", "expectedUnitPrice": 1750.00, "aliases": ["FactSet Risk Models", "FDS Risk", "Risk Models Add-on"] },
+        { "ledgerCode": "7507", "itemName": "Numerix Pricing Library (monthly)", "expectedUnitPrice": 5200.00, "aliases": ["Numerix"] },
+        { "ledgerCode": "7508", "itemName": "Axioma Portfolio Risk (monthly)", "expectedUnitPrice": 3600.00, "aliases": ["Axioma"] }
       ]
     },
     {
       "categoryName": "Compliance & Regulatory",
-      "ledgerCode": "7600",
-      "approvedBudget": 200000.00,
-      "ytdBalance": 73450.00,
+      "approvedBudget": 260000.00,
+      "ytdBalance": 96450.00,
       "items": [
-        { "itemName": "Trade Surveillance Platform (monthly)", "expectedUnitPrice": 6800.00, "aliases": ["Surveillance", "NICE Actimize"] },
-        { "itemName": "AFSL Annual Levy", "expectedUnitPrice": 9500.00, "aliases": ["ASIC Levy", "AFSL"] },
-        { "itemName": "KYC / AML Screening (per check)", "expectedUnitPrice": 4.50, "aliases": ["KYC", "AML Screening"] },
-        { "itemName": "Regulatory Reporting Service (monthly)", "expectedUnitPrice": 3200.00, "aliases": ["Reg Reporting", "DTCC Reporting"] },
-        { "itemName": "Voice Recording & Archive (per seat / month)", "expectedUnitPrice": 180.00, "aliases": ["Turret Recording", "Voice Archive"] }
+        { "ledgerCode": "7601", "itemName": "Trade Surveillance Platform (monthly)", "expectedUnitPrice": 6800.00, "aliases": ["Surveillance", "NICE Actimize"] },
+        { "ledgerCode": "7602", "itemName": "AFSL Annual Levy", "expectedUnitPrice": 9500.00, "aliases": ["ASIC Levy", "AFSL"] },
+        { "ledgerCode": "7603", "itemName": "KYC / AML Screening (per check)", "expectedUnitPrice": 4.50, "aliases": ["KYC", "AML Screening"] },
+        { "ledgerCode": "7604", "itemName": "Regulatory Reporting Service (monthly)", "expectedUnitPrice": 3200.00, "aliases": ["Reg Reporting", "DTCC Reporting"] },
+        { "ledgerCode": "7605", "itemName": "Voice Recording & Archive (per seat / month)", "expectedUnitPrice": 180.00, "aliases": ["Turret Recording", "Voice Archive"] },
+        { "ledgerCode": "7606", "itemName": "Licensee Solutions – Compliance Monitoring (monthly)", "expectedUnitPrice": 1850.00, "aliases": ["Licensee Compliance", "Licensee Solutions Compliance"] },
+        { "ledgerCode": "7607", "itemName": "Licensee Solutions – Approved Product List Management (monthly)", "expectedUnitPrice": 950.00, "aliases": ["APL Management", "Approved Product List"] },
+        { "ledgerCode": "7608", "itemName": "Licensee Solutions – Adviser Audit Service (per audit)", "expectedUnitPrice": 220.00, "aliases": ["Adviser Audit", "Licensee Audit"] }
       ]
     },
     {
       "categoryName": "Professional Services",
-      "ledgerCode": "7700",
-      "approvedBudget": 240000.00,
-      "ytdBalance": 82400.00,
+      "approvedBudget": 300000.00,
+      "ytdBalance": 102400.00,
       "items": [
-        { "itemName": "External Audit (per hour)", "expectedUnitPrice": 480.00, "aliases": ["Audit", "External Audit"] },
-        { "itemName": "Legal Counsel (per hour)", "expectedUnitPrice": 650.00, "aliases": ["Legal", "Counsel"] },
-        { "itemName": "Tax Advisory (per hour)", "expectedUnitPrice": 520.00, "aliases": ["Tax Advice"] },
-        { "itemName": "Quant Modelling Consultant (per day)", "expectedUnitPrice": 2400.00, "aliases": ["Quant Consultant", "Modelling Consultant"] }
+        { "ledgerCode": "7701", "itemName": "External Audit (per hour)", "expectedUnitPrice": 480.00, "aliases": ["Audit", "External Audit"] },
+        { "ledgerCode": "7702", "itemName": "Legal Counsel (per hour)", "expectedUnitPrice": 650.00, "aliases": ["Legal", "Counsel"] },
+        { "ledgerCode": "7703", "itemName": "Tax Advisory (per hour)", "expectedUnitPrice": 520.00, "aliases": ["Tax Advice"] },
+        { "ledgerCode": "7704", "itemName": "Quant Modelling Consultant (per day)", "expectedUnitPrice": 2400.00, "aliases": ["Quant Consultant", "Modelling Consultant"] },
+        { "ledgerCode": "7705", "itemName": "AdviserLogic – Practice Management Platform (per adviser / month)", "expectedUnitPrice": 150.00, "aliases": ["AdviserLogic PMP", "AdviserLogic Practice Management"] },
+        { "ledgerCode": "7706", "itemName": "AdviserLogic – Document Vault Add-on (monthly)", "expectedUnitPrice": 480.00, "aliases": ["AdviserLogic Document Vault", "AdviserLogic Doc Vault"] },
+        { "ledgerCode": "7707", "itemName": "AdviserLogic – Statement of Advice Generator (monthly)", "expectedUnitPrice": 620.00, "aliases": ["AdviserLogic SOA", "Statement of Advice Generator"] },
+        { "ledgerCode": "7708", "itemName": "Bloomberg Market Concepts Certification (per seat)", "expectedUnitPrice": 250.00, "aliases": ["BMC", "Bloomberg Market Concepts"] }
       ]
     }
   ],

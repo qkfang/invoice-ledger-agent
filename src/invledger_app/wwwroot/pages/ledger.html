@@ -69,6 +69,12 @@
 
     function renderLedger() {
       const invByCategory = {};
+      const codeToCategory = {};
+      for (const c of (ledger.categories || [])) {
+        for (const i of (c.items || [])) {
+          if (i.ledgerCode) codeToCategory[String(i.ledgerCode).trim()] = c.categoryName;
+        }
+      }
       const classifiedByInvoice = {};
       for (const r of [...ledgerMatchedAll, ...ledgerExceptionAll]) {
         if (!classifiedByInvoice[r.invoiceId]) classifiedByInvoice[r.invoiceId] = [];
@@ -79,7 +85,9 @@
         const invoiceId = inv.invoiceId;
         const items = classifiedByInvoice[invoiceId] || [];
         for (const li of items) {
-          const catName = li.matchedLedgerCategory || li.lineItemCategory;
+          const code = li.ledgerCode;
+          if (!code) continue;
+          const catName = codeToCategory[String(code).trim()];
           if (!catName) continue;
           const key = catName.trim().toLowerCase();
           if (!invByCategory[key]) invByCategory[key] = [];
@@ -87,6 +95,7 @@
             invoiceId,
             lineNo: li.lineNo || li.lineItem,
             description: li.lineItemDescription,
+            ledgerCode: code,
             unitPrice: li.unitPrice,
             lineTotal: li.lineTotal,
             currency
@@ -101,22 +110,24 @@
               <tr>
                 <td>${esc(li.invoiceId)}</td>
                 <td>${esc(li.lineNo)}</td>
+                <td>${esc(li.ledgerCode)}</td>
                 <td>${esc(li.description)}</td>
                 <td>${fmtMoney(li.unitPrice, li.currency)}</td>
                 <td>${fmtMoney(li.lineTotal, li.currency)}</td>
               </tr>`).join('')
-          : `<tr><td colspan="5" class="empty" style="padding:10px 8px;">No invoice items.</td></tr>`;
+          : `<tr><td colspan="6" class="empty" style="padding:10px 8px;">No invoice items.</td></tr>`;
         return `
           <div class="cat-block">
-            <h3>${esc(c.categoryName)} <span class="cat-meta">[${esc(c.ledgerCode)}] · Budget ${fmtMoney(c.approvedBudget, ledger.currency)} · YTD ${fmtMoney(c.ytdBalance, ledger.currency)}</span></h3>
+            <h3>${esc(c.categoryName)} <span class="cat-meta">Budget ${fmtMoney(c.approvedBudget, ledger.currency)} · YTD ${fmtMoney(c.ytdBalance, ledger.currency)}</span></h3>
             <div class="ledger-split">
               <div>
                 <div class="col-label">Ledger Items</div>
                 <table class="data">
-                  <thead><tr><th>Sub-item</th><th style="width:140px;">Expected Unit Price</th><th>Aliases</th></tr></thead>
+                  <thead><tr><th style="width:80px;">Code</th><th>Sub-item</th><th style="width:140px;">Expected Unit Price</th><th>Aliases</th></tr></thead>
                   <tbody>
                     ${c.items.map(i => `
                       <tr>
+                        <td>${esc(i.ledgerCode)}</td>
                         <td>${esc(i.itemName)}</td>
                         <td>${fmtMoney(i.expectedUnitPrice, ledger.currency)}</td>
                         <td style="color:var(--muted);">${esc((i.aliases || []).join(', '))}</td>
@@ -127,7 +138,7 @@
               <div>
                 <div class="col-label">Invoice Items</div>
                 <table class="data">
-                  <thead><tr><th>Invoice</th><th>Line No</th><th>Description</th><th style="width:100px;">Unit Price</th><th style="width:100px;">Line Total</th></tr></thead>
+                  <thead><tr><th>Invoice</th><th>Line No</th><th style="width:80px;">Code</th><th>Description</th><th style="width:100px;">Unit Price</th><th style="width:100px;">Line Total</th></tr></thead>
                   <tbody>${invRows}</tbody>
                 </table>
               </div>
@@ -141,14 +152,14 @@
           <td>${esc((p.invoiceId || '') + '-' + (p.lineNo || p.lineItem || ''))}</td>
           <td>${esc(p.invoiceId)}</td>
           <td>${esc(p.businessName)}</td>
-          <td>${esc(p.matchedLedgerCategory || p.lineItemCategory)}</td>
+          <td>${esc(p.ledgerCode || '')}</td>
           <td>${esc(p.matchedLedgerItem || p.lineItemDescription)}</td>
           <td>${fmtMoney(p.convertedLineTotal, p.convertedCurrency || ledger.currency)}</td>
           <td>${esc(p.status || '')}</td>
         </tr>`).join('');
       document.getElementById('posted-area').innerHTML = `
         <table class="data">
-          <thead><tr><th>Entry</th><th>Invoice</th><th>Vendor</th><th>Ledger Category</th><th>Item</th><th>Amount</th><th>Status</th></tr></thead>
+          <thead><tr><th>Entry</th><th>Invoice</th><th>Vendor</th><th>Ledger Code</th><th>Item</th><th>Amount</th><th>Status</th></tr></thead>
           <tbody>${rows || `<tr><td colspan="7" class="empty">No matched entries for the selected run.</td></tr>`}</tbody>
         </table>`;
     }

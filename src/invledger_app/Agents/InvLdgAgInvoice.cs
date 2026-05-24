@@ -19,21 +19,20 @@ public class InvLdgAgInvoice : BaseAgent
 
         For each invoice attachment:
           1. If a blobUrl is provided, call extractDoc_CU with that URL to read the document content.
-          2. Build categories[] with nested lineItems[] for each category, AND a flat invoice-level
-             lineItems[] containing every line item across all categories (same shape). Assign a unique
-             lineNo (e.g. L1, L2...) within each invoice and use the same lineNo in nested and flat arrays.
-          3. Ensure nested lineItems sum to categoryTotal, and categoryTotals sum to totalAmount.
+          2. Build a flat invoice-level lineItems[] containing every line item. Assign a unique
+             lineNo (e.g. L1, L2...) within each invoice. Include categoryName on each line item.
+          3. Ensure lineItems sum to totalAmount.
           4. Call fx_convert to convert every monetary value from the invoice currency to AUD:
-               - totalAmount → audTotalAmount
-               - each categoryTotal → audCategoryTotal
-               - each lineTotal → audLineTotal (nested and flat)
-             If the invoice currency is AUD, set the aud* fields equal to the original amounts.
-             If no exchange rate is available, set the aud* fields to null.
+               - totalAmount → convertedInvoiceAmount
+               - each unitPrice → convertedUnitPrice
+               - each lineTotal → convertedLineTotal
+             If the invoice currency is AUD, set the converted* fields equal to the original amounts.
+             If no exchange rate is available, set the converted* fields to null.
              Also emit these descriptive fields on each invoice:
                businessName=vendorName, fromDate=invoiceDate, toDate=dueDate (or ""),
                invoiceAmount=totalAmount, invoiceCurrency=currency,
                exchangeRate=rate (1 if AUD, null if unavailable),
-               convertedInvoiceAmount=audTotalAmount, convertedInvoiceCurrency="AUD".
+               convertedInvoiceCurrency="AUD".
 
         Return ONLY this JSON, no other text. Use null for unknown values.
 
@@ -50,7 +49,6 @@ public class InvLdgAgInvoice : BaseAgent
               "paymentTerms": "e.g. Net 30",
               "currency": "ISO 4217 code",
               "totalAmount": 0.00,
-              "audTotalAmount": 0.00,
               "documentType": "invoice" | "statement" | "reminder" | "other",
               "extractionStatus": "ok" | "failed",
               "extractionNotes": "short notes or null",
