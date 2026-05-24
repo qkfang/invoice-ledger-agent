@@ -25,6 +25,8 @@ public class InvLdgAgInvoice : BaseAgent
              extracted content if the ingestion values were null or incorrect.
           3. Build categories[] with nested lineItems[] for each category, AND a flat invoice-level
              lineItems[] containing every line item across all categories (same shape).
+             Assign a unique line reference for each invoice line as lineNo (e.g., L1, L2...),
+             unique within that invoice, and carry the same lineNo in both nested and flat arrays.
           4. Ensure the sum of nested lineItems in each category equals categoryTotal, and the sum of
              categoryTotals equals totalAmount.
           5. Call the fx_convert tool to convert every monetary value from the invoice currency to AUD:
@@ -75,6 +77,7 @@ public class InvLdgAgInvoice : BaseAgent
                   "audCategoryTotal": 0.00,
                   "lineItems": [
                     {
+                      "lineNo": "unique line reference within this invoice, e.g. L1",
                       "categoryName": "matching category label",
                       "description": "line item description",
                       "quantity": 0,
@@ -87,6 +90,7 @@ public class InvLdgAgInvoice : BaseAgent
               ],
               "lineItems": [
                 {
+                  "lineNo": "unique line reference within this invoice, e.g. L1",
                   "categoryName": "matching category label",
                   "description": "line item description",
                   "quantity": 0,

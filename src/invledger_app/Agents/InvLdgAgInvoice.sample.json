@@ -34,6 +34,7 @@
           "audCategoryTotal": 1500.00,
           "lineItems": [
             {
+              "lineNo": "L1",
               "categoryName": "Hardware",
               "description": "Wireless keyboard",
               "quantity": 4,
@@ -42,6 +43,7 @@
               "audLineTotal": 900.00
             },
             {
+              "lineNo": "L2",
               "categoryName": "Hardware",
               "description": "USB-C dock",
               "quantity": 2,
@@ -57,6 +59,7 @@
           "audCategoryTotal": 351.84,
           "lineItems": [
             {
+              "lineNo": "L3",
               "categoryName": "Services",
               "description": "On-site setup",
               "quantity": 1,
@@ -69,6 +72,7 @@
       ],
       "lineItems": [
         {
+          "lineNo": "L1",
           "categoryName": "Hardware",
           "description": "Wireless keyboard",
           "quantity": 4,
@@ -77,6 +81,7 @@
           "audLineTotal": 900.00
         },
         {
+          "lineNo": "L2",
           "categoryName": "Hardware",
           "description": "USB-C dock",
           "quantity": 2,
@@ -85,6 +90,7 @@
           "audLineTotal": 600.00
         },
         {
+          "lineNo": "L3",
           "categoryName": "Services",
           "description": "On-site setup",
           "quantity": 1,

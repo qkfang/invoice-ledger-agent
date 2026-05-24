@@ -72,7 +72,8 @@
       for (const inv of invoices) {
         const currency = inv.invoiceCurrency || inv.originalInvoiceCurrency || inv.currency;
         const invoiceId = inv.invoiceId;
-        const items = [...(inv.lineItems || []), ...(inv.exceptions || [])];
+        const matchedRecords = inv.matchedRecords || inv.lineItems || [];
+        const items = [...matchedRecords, ...(inv.exceptions || [])];
         for (const li of items) {
           const catName = li.matchedLedgerCategory || li.lineItemCategory;
           if (!catName) continue;
@@ -80,6 +81,7 @@
           if (!invByCategory[key]) invByCategory[key] = [];
           invByCategory[key].push({
             invoiceId,
+            lineNo: li.lineNo || li.lineItem,
             description: li.lineItemDescription,
             unitPrice: li.unitPrice,
             lineTotal: li.lineTotal,
@@ -94,11 +96,12 @@
           ? invItems.map(li => `
               <tr>
                 <td>${esc(li.invoiceId)}</td>
+                <td>${esc(li.lineNo)}</td>
                 <td>${esc(li.description)}</td>
                 <td>${fmtMoney(li.unitPrice, li.currency)}</td>
                 <td>${fmtMoney(li.lineTotal, li.currency)}</td>
               </tr>`).join('')
-          : `<tr><td colspan="4" class="empty" style="padding:10px 8px;">No invoice items.</td></tr>`;
+          : `<tr><td colspan="5" class="empty" style="padding:10px 8px;">No invoice items.</td></tr>`;
         return `
           <div class="cat-block">
             <h3>${esc(c.categoryName)} <span class="cat-meta">[${esc(c.ledgerCode)}] · Budget ${fmtMoney(c.approvedBudget, ledger.currency)} · YTD ${fmtMoney(c.ytdBalance, ledger.currency)}</span></h3>
@@ -120,7 +123,7 @@
               <div>
                 <div class="col-label">Invoice Items</div>
                 <table class="data">
-                  <thead><tr><th>Invoice</th><th>Description</th><th style="width:100px;">Unit Price</th><th style="width:100px;">Line Total</th></tr></thead>
+                  <thead><tr><th>Invoice</th><th>Line No</th><th>Description</th><th style="width:100px;">Unit Price</th><th style="width:100px;">Line Total</th></tr></thead>
                   <tbody>${invRows}</tbody>
                 </table>
               </div>
