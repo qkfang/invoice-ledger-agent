@@ -1,0 +1,13 @@
+{
+  "id": 7,
+  "from": "accountsreceivable-emea@ice.com",
+  "fromName": "ICE Data Services Europe Limited",
+  "to": "ap@company.com",
+  "subject": "Invoice INV-2026-0007 – May 2026 Exchange Data, Connectivity & Co-location Services",
+  "date": "2026-05-21",
+  "preview": "Attached is your EUR invoice for May exchange data feeds, market connectivity ports, and co-location services.",
+  "body": "Dear Accounts Payable Team,\n\nPlease find attached invoice #INV-2026-0007 for May 2026 market access and trading technology services under our EMEA master services agreement.\n\nInvoice Currency: EUR\nSubtotal: EUR 27,400.00\nVAT (20%): EUR 5,480.00\nTotal Amount Due: EUR 32,880.00\nDue Date: June 20, 2026\nPayment Terms: Net 30\n\nPlease include the invoice number in your remittance reference. For billing questions, reply to this message and include your customer account number.\n\nKind regards,\nICE Data Services Europe Limited\nAccounts Receivable (EMEA)",
+  "attachments": [
+    { "name": "ice-europe-may.pdf", "invoiceId": "INV-2026-0007" }
+  ]
+}

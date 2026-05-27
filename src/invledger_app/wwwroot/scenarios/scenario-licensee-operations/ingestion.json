@@ -1,0 +1,13 @@
+{
+  "id": 8,
+  "from": "remittance@licenseesolutions.com.au",
+  "fromName": "Licensee Solutions Pty Ltd",
+  "to": "ap@company.com",
+  "subject": "Tax Invoice INV-2026-0008 – Adviser Platform & Compliance Services (May 2026)",
+  "date": "2026-05-22",
+  "preview": "Attached is your consolidated May tax invoice covering AdviserLogic platform subscriptions and compliance services.",
+  "body": "Dear Accounts Payable Team,\n\nPlease find attached tax invoice #INV-2026-0008 covering AdviserLogic platform subscriptions and Licensee Solutions compliance services for the May 2026 billing period.\n\nCustomer Number: LS-882914\nContract Number: LS-AU-2026-114\nSubtotal: AUD 25,440.00\nGST (10%): AUD 2,544.00\nTotal Amount Due: AUD 27,984.00\nDue Date: June 21, 2026\nPayment Terms: Net 30\n\nPlease quote both contract and invoice number in your payment advice. For remittance support, contact remittance@licenseesolutions.com.au.\n\nRegards,\nLicensee Solutions Pty Ltd\nAccounts Receivable",
+  "attachments": [
+    { "name": "licensee-operations-may.pdf", "invoiceId": "INV-2026-0008" }
+  ]
+}
