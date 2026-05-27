@@ -1,0 +1,135 @@
+<mxfile host="Electron" agent="copilot">
+  <diagram id="azure-foundry-fabric" name="Azure Foundry Fabric">
+    <mxGraphModel dx="2303" dy="1401" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="users" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" value="Document / Invoices" vertex="1">
+          <mxGeometry height="60" width="140" x="-53" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="grpCompute" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=1;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingLeft=10;spacingTop=6;" value="Compute &amp;amp; Web" vertex="1">
+          <mxGeometry height="160" width="360" x="240" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="web" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1565C0;fontSize=12;fontStyle=1;" value="Web App&lt;br&gt;invledger-web" vertex="1">
+          <mxGeometry height="70" width="260" x="290" y="185" as="geometry" />
+        </mxCell>
+        <mxCell id="grpFoundry" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;strokeWidth=1;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingLeft=10;spacingTop=6;" value="Microsoft Foundry" vertex="1">
+          <mxGeometry height="380" width="430" x="840" y="97" as="geometry" />
+        </mxCell>
+        <mxCell id="foundry" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontSize=12;fontStyle=1;" value="Foundry Resource" vertex="1">
+          <mxGeometry height="50" width="390" x="860" y="137" as="geometry" />
+        </mxCell>
+        <mxCell id="project" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontSize=12;" value="Foundry Project (&lt;b&gt;Agents&lt;/b&gt;)&lt;br&gt;invledger-foundry-project" vertex="1">
+          <mxGeometry height="50" width="390" x="860" y="207" as="geometry" />
+        </mxCell>
+        <mxCell id="grpModels" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;strokeWidth=1;verticalAlign=top;fontStyle=1;fontSize=11;align=center;spacingLeft=8;spacingTop=4;" value="Model Deployments" vertex="1">
+          <mxGeometry height="155" width="390" x="860" y="289" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontSize=12;" value="gpt-5.4" vertex="1">
+          <mxGeometry height="40" width="170" x="880" y="334" as="geometry" />
+        </mxCell>
+        <mxCell id="m2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontSize=12;" value="gpt-4.1" vertex="1">
+          <mxGeometry height="40" width="170" x="1060" y="334" as="geometry" />
+        </mxCell>
+        <mxCell id="m3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontSize=12;" value="gpt-4.1-mini" vertex="1">
+          <mxGeometry height="40" width="170" x="880" y="389" as="geometry" />
+        </mxCell>
+        <mxCell id="m4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontSize=12;" value="text-embedding-3-large" vertex="1">
+          <mxGeometry height="40" width="170" x="1060" y="389" as="geometry" />
+        </mxCell>
+        <mxCell id="grpCog" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;strokeWidth=1;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingLeft=10;spacingTop=6;" value="Cognitive Services" vertex="1">
+          <mxGeometry height="200" width="250" x="307" y="-141" as="geometry" />
+        </mxCell>
+        <mxCell id="di" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4527A0;fontSize=12;" value="Document Intelligence&#xa;(prebuilt-layout)" vertex="1">
+          <mxGeometry height="60" width="210" x="327" y="-101" as="geometry" />
+        </mxCell>
+        <mxCell id="cu" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#4527A0;fontSize=12;" value="Content Understanding" vertex="1">
+          <mxGeometry height="60" width="210" x="327" y="-21" as="geometry" />
+        </mxCell>
+        <mxCell id="grpStore" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;strokeWidth=1;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingLeft=10;spacingTop=6;" value="Storage" vertex="1">
+          <mxGeometry height="200" width="300" x="429" y="396" as="geometry" />
+        </mxCell>
+        <mxCell id="sa" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontSize=12;fontStyle=1;" value="Storage Account" vertex="1">
+          <mxGeometry height="60" width="260" x="449" y="436" as="geometry" />
+        </mxCell>
+        <mxCell id="bc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontSize=12;" value="Blob Container&#xa;notices" vertex="1">
+          <mxGeometry height="60" width="260" x="449" y="516" as="geometry" />
+        </mxCell>
+        <mxCell id="grpFabric" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0277BD;strokeWidth=1;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingLeft=10;spacingTop=6;" value="Microsoft Fabric" vertex="1">
+          <mxGeometry height="200" width="300" x="99" y="396" as="geometry" />
+        </mxCell>
+        <mxCell id="fc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0277BD;fontSize=12;fontStyle=1;" value="Fabric Capacity" vertex="1">
+          <mxGeometry height="60" width="260" x="119" y="436" as="geometry" />
+        </mxCell>
+        <mxCell id="lh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0277BD;fontSize=12;" value="Lakehouse / Dashboard&lt;br&gt;invoice + ledger tables" vertex="1">
+          <mxGeometry height="60" width="260" x="119" y="516" as="geometry" />
+        </mxCell>
+        <mxCell id="grpObs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#AD1457;strokeWidth=1;verticalAlign=top;fontStyle=1;fontSize=12;align=center;spacingLeft=10;spacingTop=6;" value="Observability" vertex="1">
+          <mxGeometry height="210" width="320" x="895" y="-181" as="geometry" />
+        </mxCell>
+        <mxCell id="ai" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AD1457;fontSize=12;fontStyle=1;" value="Application Insights" vertex="1">
+          <mxGeometry height="60" width="280" x="915" y="-131" as="geometry" />
+        </mxCell>
+        <mxCell id="law" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AD1457;fontSize=12;fontStyle=1;" value="Log Analytics Workspace" vertex="1">
+          <mxGeometry height="60" width="280" x="915" y="-51" as="geometry" />
+        </mxCell>
+        <mxCell id="e_users_web" edge="1" parent="1" source="users" style="endArrow=classic;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeWidth=2;" target="web">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_users_label" connectable="0" parent="e_users_web" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" value="HTTPS" vertex="1">
+          <mxGeometry relative="1" x="-0.2" as="geometry">
+            <mxPoint x="-4" y="15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_web_project" edge="1" parent="1" source="grpCompute" style="endArrow=classic;html=1;strokeWidth=1.5;entryX=0;entryY=0.294;entryDx=0;entryDy=0;entryPerimeter=0;" target="grpFoundry">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_web_project_lbl" connectable="0" parent="e_web_project" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;" value="Responses API" vertex="1">
+          <mxGeometry relative="1" x="-0.1" as="geometry">
+            <mxPoint y="16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_web_cu" edge="1" parent="1" source="grpCompute" style="endArrow=classic;html=1;strokeWidth=1.5;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.451;entryY=0.997;entryDx=0;entryDy=0;entryPerimeter=0;" target="grpCog">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_web_sa" edge="1" parent="1" source="grpCompute" style="endArrow=classic;html=1;strokeWidth=1.5;" target="grpStore">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_web_sa_lbl" connectable="0" parent="e_web_sa" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;" value="Blob" vertex="1">
+          <mxGeometry relative="1" x="-0.1" as="geometry">
+            <mxPoint x="20" y="-3" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_web_lh" edge="1" parent="1" source="grpCompute" style="endArrow=classic;html=1;strokeWidth=1.5;" target="grpFabric">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_web_lh_lbl" connectable="0" parent="e_web_lh" style="edgeLabel;html=1;align=center;verticalAlign=middle;fontSize=10;" value="SDK" vertex="1">
+          <mxGeometry relative="1" x="-0.1" as="geometry">
+            <mxPoint x="-25" y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_web_ai" edge="1" parent="1" source="grpCompute" style="endArrow=classic;html=1;dashed=1;strokeWidth=1.5;" target="grpObs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ai_law" edge="1" parent="1" source="ai" style="endArrow=classic;html=1;strokeWidth=1.5;" target="law">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_foundry_law" edge="1" parent="1" source="grpFoundry" style="endArrow=classic;html=1;dashed=1;strokeWidth=1.5;" target="grpObs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sa_bc" edge="1" parent="1" source="sa" style="endArrow=classic;html=1;strokeWidth=1;" target="bc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_fc_lh" edge="1" parent="1" source="fc" style="endArrow=classic;html=1;strokeWidth=1;" target="lh">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_foundry_project" edge="1" parent="1" source="foundry" style="endArrow=classic;html=1;strokeWidth=1;" target="project">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6ShFCEResoJzcUj4Hz1q-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontSize=34;fontStyle=1;" value="&lt;font&gt;Invoice Ledger Agent&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="609" x="362" y="-301" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
