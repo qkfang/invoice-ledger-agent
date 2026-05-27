@@ -28,8 +28,8 @@
         { "ledgerCode": "7106", "itemName": "Bloomberg News Enterprise Feed (monthly)", "expectedUnitPrice": 4200.00, "aliases": ["BBG News", "Bloomberg News"] },
         { "ledgerCode": "7107", "itemName": "Bloomberg Data License – Reference Data Feed Tier 2 (monthly)", "expectedUnitPrice": 6594.00, "aliases": ["BBG Data License", "Bloomberg Reference Data", "Data License – Reference Data Feed"] },
         { "ledgerCode": "7108", "itemName": "Bloomberg B-PIPE Managed Market Data Feed (monthly)", "expectedUnitPrice": 5966.00, "aliases": ["B-PIPE", "BPIPE", "Bloomberg BPIPE"] },
-        { "ledgerCode": "7109", "itemName": "FactSet Fundamentals Data Feed (monthly)", "expectedUnitPrice": 4500.00, "aliases": ["FactSet Fundamentals", "FDS Fundamentals", "Data Feed – Fundamentals"] },
-        { "ledgerCode": "7110", "itemName": "FactSet Estimates – Premium Data (monthly)", "expectedUnitPrice": 2100.00, "aliases": ["FactSet Estimates", "FDS Estimates"] },
+        { "ledgerCode": "7109", "itemName": "FactSet Fundamentals Data Feed (monthly)", "expectedUnitPrice": 7065.00, "aliases": ["FactSet Fundamentals", "FDS Fundamentals", "Data Feed – Fundamentals"] },
+        { "ledgerCode": "7110", "itemName": "FactSet Estimates – Premium Data (monthly)", "expectedUnitPrice": 3297.00, "aliases": ["FactSet Estimates", "FDS Estimates"] },
         { "ledgerCode": "7111", "itemName": "FactSet Mergers & Acquisitions Database (monthly)", "expectedUnitPrice": 1600.00, "aliases": ["FactSet M&A", "FDS M&A", "Mergers & Acquisitions Database"] },
         { "ledgerCode": "7112", "itemName": "FactSet Ownership Data Module (monthly)", "expectedUnitPrice": 1400.00, "aliases": ["FactSet Ownership", "FDS Ownership", "Ownership Data Module"] },
         { "ledgerCode": "7113", "itemName": "FactSet Quantitative Research – Alpha Testing (monthly)", "expectedUnitPrice": 2800.00, "aliases": ["FactSet Quant", "FDS Quant Research", "Quantitative Research – Alpha Testing"] },
@@ -83,8 +83,8 @@
         { "ledgerCode": "7502", "itemName": "Bloomberg PORT Enterprise – Portfolio & Risk Analytics (monthly)", "expectedUnitPrice": 2500.00, "aliases": ["PORT", "Bloomberg PORT", "PORT Enterprise"] },
         { "ledgerCode": "7503", "itemName": "Bloomberg AIM – Asset & Investment Manager (monthly)", "expectedUnitPrice": 5024.00, "aliases": ["AIM", "Bloomberg AIM"] },
         { "ledgerCode": "7504", "itemName": "Bloomberg MARS Multi-Asset Risk System Module (monthly)", "expectedUnitPrice": 3297.00, "aliases": ["MARS", "Bloomberg MARS"] },
-        { "ledgerCode": "7505", "itemName": "FactSet Portfolio Analytics Module (monthly)", "expectedUnitPrice": 3200.00, "aliases": ["FactSet PA", "FDS Portfolio Analytics", "Portfolio Analytics Module"] },
-        { "ledgerCode": "7506", "itemName": "FactSet Risk Models Add-on (monthly)", "expectedUnitPrice": 1750.00, "aliases": ["FactSet Risk Models", "FDS Risk", "Risk Models Add-on"] },
+        { "ledgerCode": "7505", "itemName": "FactSet Portfolio Analytics Module (monthly)", "expectedUnitPrice": 5024.00, "aliases": ["FactSet PA", "FDS Portfolio Analytics", "Portfolio Analytics Module"] },
+        { "ledgerCode": "7506", "itemName": "FactSet Risk Models Add-on (monthly)", "expectedUnitPrice": 2747.50, "aliases": ["FactSet Risk Models", "FDS Risk", "Risk Models Add-on"] },
         { "ledgerCode": "7507", "itemName": "Numerix Pricing Library (monthly)", "expectedUnitPrice": 5200.00, "aliases": ["Numerix"] },
         { "ledgerCode": "7508", "itemName": "Axioma Portfolio Risk (monthly)", "expectedUnitPrice": 3600.00, "aliases": ["Axioma"] }
       ]

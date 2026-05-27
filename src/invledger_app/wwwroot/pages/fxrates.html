@@ -19,14 +19,16 @@
 <body>
   <main>
     <h1>FX Rates</h1>
-    <div class="subtitle">USD to AUD exchange rates by period, used to convert invoice amounts.</div>
+    <div class="subtitle">Foreign currency exchange rates by period, used to convert invoice amounts.</div>
 
     <div class="card">
-      <h2>USD → AUD Rate by Period</h2>
+      <h2>Exchange Rates by Period</h2>
       <div id="notice-area"></div>
       <table class="rates" id="rates-table">
         <thead>
           <tr>
+            <th>From Ccy</th>
+            <th>To Ccy</th>
             <th>From Date</th>
             <th>To Date</th>
             <th>Rate</th>
@@ -34,11 +36,19 @@
           </tr>
         </thead>
         <tbody id="rates-body">
-          <tr><td colspan="4"><div class="empty">Loading...</div></td></tr>
+          <tr><td colspan="6"><div class="empty">Loading...</div></td></tr>
         </tbody>
       </table>
 
-      <div class="add-row" id="add-form">
+      <div class="add-row" id="add-form" style="grid-template-columns: 90px 90px 1fr 1fr 1fr auto;">
+        <div>
+          <label>From Ccy</label>
+          <input type="text" id="add-from" placeholder="USD" maxlength="3" style="width:80px;text-transform:uppercase;" />
+        </div>
+        <div>
+          <label>To Ccy</label>
+          <input type="text" id="add-to" placeholder="AUD" maxlength="3" style="width:80px;text-transform:uppercase;" />
+        </div>
         <div>
           <label>From Date</label>
           <input type="date" id="add-fromDate" />
@@ -87,6 +97,8 @@
       }
       tbody.innerHTML = rates.map((r, i) => `
         <tr data-index="${i}">
+          <td><input type="text" class="r-from" value="${esc(r.from || '')}" maxlength="3" style="width:70px;text-transform:uppercase;" /></td>
+          <td><input type="text" class="r-to" value="${esc(r.to || '')}" maxlength="3" style="width:70px;text-transform:uppercase;" /></td>
           <td><input type="date" class="r-fromDate" value="${esc(r.fromDate || '')}" /></td>
           <td><input type="date" class="r-toDate" value="${esc(r.toDate || '')}" /></td>
           <td><input type="number" class="r-rate" value="${r.rate}" step="0.0001" min="0.0001" style="width:110px;" /></td>
@@ -102,8 +114,8 @@
     function getRowValues(i) {
       const row = document.querySelector(`tr[data-index="${i}"]`);
       return {
-        from: 'USD',
-        to: 'AUD',
+        from: (row.querySelector('.r-from').value || '').trim().toUpperCase(),
+        to: (row.querySelector('.r-to').value || '').trim().toUpperCase(),
         fromDate: row.querySelector('.r-fromDate').value.trim(),
         toDate: row.querySelector('.r-toDate').value.trim() || null,
         rate: parseFloat(row.querySelector('.r-rate').value)
@@ -112,8 +124,8 @@
 
     function saveRow(i) {
       const v = getRowValues(i);
-      if (!v.fromDate || isNaN(v.rate) || v.rate <= 0) {
-        showNotice('From Date and a positive rate are required.', 'error');
+      if (!v.from || !v.to || !v.fromDate || isNaN(v.rate) || v.rate <= 0) {
+        showNotice('From/To currency, From Date and a positive rate are required.', 'error');
         return;
       }
       rates[i] = v;
@@ -126,14 +138,18 @@
     }
 
     function addRate() {
+      const from = (document.getElementById('add-from').value || '').trim().toUpperCase();
+      const to = (document.getElementById('add-to').value || '').trim().toUpperCase();
       const fromDate = document.getElementById('add-fromDate').value.trim();
       const toDate = document.getElementById('add-toDate').value.trim() || null;
       const rate = parseFloat(document.getElementById('add-rate').value);
-      if (!fromDate || isNaN(rate) || rate <= 0) {
-        showNotice('From Date and a positive rate are required.', 'error');
+      if (!from || !to || !fromDate || isNaN(rate) || rate <= 0) {
+        showNotice('From/To currency, From Date and a positive rate are required.', 'error');
         return;
       }
-      rates.push({ from: 'USD', to: 'AUD', fromDate, toDate, rate });
+      rates.push({ from, to, fromDate, toDate, rate });
+      document.getElementById('add-from').value = '';
+      document.getElementById('add-to').value = '';
       document.getElementById('add-fromDate').value = '';
       document.getElementById('add-toDate').value = '';
       document.getElementById('add-rate').value = '';
@@ -166,7 +182,7 @@
         renderRates();
       } catch (err) {
         document.getElementById('rates-body').innerHTML =
-          `<tr><td colspan="4"><div class="empty error">${esc(err.message)}</div></td></tr>`;
+          `<tr><td colspan="6"><div class="empty error">${esc(err.message)}</div></td></tr>`;
       }
     })();
   </script>
