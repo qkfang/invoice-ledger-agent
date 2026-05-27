@@ -38,6 +38,11 @@
     </div>
 
     <div class="card">
+      <h2>Matching Rules</h2>
+      <div id="rules-area"><div class="empty">Loading rules…</div></div>
+    </div>
+
+    <div class="card">
       <h2>Result</h2>
       <div class="tabs">
         <button class="tab active" data-tab="result">Result</button>
@@ -75,6 +80,19 @@
     let ledgerMatchedAll = [];
     let ledgerExceptionAll = [];
     let currentRunName = null;
+    let ledgerCodeMap = {};
+
+    (async () => {
+      try {
+        const r = await fetch('../data/ledger.json');
+        const j = await r.json();
+        for (const cat of (j?.categories || [])) {
+          for (const it of (cat.items || [])) {
+            if (it.ledgerCode != null) ledgerCodeMap[String(it.ledgerCode)] = it.expectedUnitPrice;
+          }
+        }
+      } catch { /* ignore */ }
+    })();
 
     function setRunLoading(loading) {
       const b = document.getElementById('btn-run');
@@ -111,6 +129,8 @@
           <td>${r.lineTotal != null ? fmtMoney(r.lineTotal, currency) : '—'}</td>
           <td>${r.convertedUnitPrice != null ? fmtMoney(r.convertedUnitPrice, r.convertedCurrency || convCcy) : '—'}</td>
           <td>${r.convertedLineTotal != null ? fmtMoney(r.convertedLineTotal, r.convertedCurrency || convCcy) : '—'}</td>
+          <td style="background:#fff8d6;">${esc(r.ledgerCode || '')}</td>
+          <td style="background:#fff8d6;">${r.ledgerCode != null && ledgerCodeMap[String(r.ledgerCode)] != null ? fmtMoney(ledgerCodeMap[String(r.ledgerCode)], 'AUD') : '—'}</td>
           <td>${esc(r.status || '')}</td>
           <td><span class="rule-pill">${esc(r.ruleApplied || '')}</span></td>
           <td style="color:var(--muted);">${esc(r.reason || '')}</td>
@@ -121,7 +141,7 @@
             <th>Line No</th><th>Category</th><th>Description</th><th>Business</th>
             <th>Qty</th><th>Unit Price</th><th>Line Total</th>
             <th>Conv. Unit Price</th><th>Conv. Line Total</th>
-            <th>Status</th><th>Rule</th><th>Reason</th>
+            <th style="background:#fff8d6;">Ledger Code</th><th style="background:#fff8d6;">Expected Unit Price</th><th>Status</th><th>Rule</th><th>Reason</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
@@ -195,6 +215,41 @@
     (async () => {
       const runSel = document.getElementById('run-select');
       const summary = document.getElementById('run-summary');
+
+      // Load and render matching rules.
+      (async () => {
+        try {
+          const r = await fetch('../data/rules.json');
+          const j = await r.json();
+          const rules = Array.isArray(j?.rules) ? j.rules : [];
+          if (!rules.length) {
+            document.getElementById('rules-area').innerHTML = '<div class="empty">No rules defined.</div>';
+            return;
+          }
+          const rows = rules.map(r => {
+            const params = [];
+            if (r.tolerancePercent != null) params.push(`±${r.tolerancePercent}%`);
+            if (r.toleranceAbsolute != null) params.push(`$${r.toleranceAbsolute} abs`);
+            if (r.thresholdAmount != null) params.push(`> $${r.thresholdAmount}`);
+            return `
+              <tr>
+                <td><span class="rule-pill">${esc(r.id)}</span></td>
+                <td>${esc(r.name)}</td>
+                <td style="color:var(--muted);">${esc(r.description)}</td>
+                <td>${esc(params.join(', '))}</td>
+                <td>${esc(r.outcome)}</td>
+                <td>${r.humanInLoop ? 'Yes' : ''}</td>
+              </tr>`;
+          }).join('');
+          document.getElementById('rules-area').innerHTML = `
+            <table class="data">
+              <thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Parameters</th><th>Outcome</th><th>Human in Loop</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>`;
+        } catch (err) {
+          document.getElementById('rules-area').innerHTML = `<div class="empty error">Error loading rules: ${esc(err.message)}</div>`;
+        }
+      })();
 
       runSel.addEventListener('change', async () => {
         const runName = runSel.value;

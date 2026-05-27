@@ -61,17 +61,19 @@
       }
       const rows = allExceptions.map(e => `
         <tr>
+          <td>${esc(e.kind || 'exception')}</td>
           <td>${esc(e.invoiceId)}</td>
           <td>${esc(e.lineNo)}</td>
           <td>${esc(e.vendorName)}</td>
           <td>${esc(e.categoryName)}</td>
           <td>${esc(e.description)}</td>
           <td>${fmtMoney(e.lineTotal)}</td>
+          <td>${esc(e.ruleApplied || '')}</td>
           <td style="color:var(--muted);">${esc(e.reason)}</td>
         </tr>`).join('');
       document.getElementById('exc-area').innerHTML = `
         <table class="data">
-          <thead><tr><th>Invoice</th><th>Line No</th><th>Vendor</th><th>Category</th><th>Description</th><th>Line Total</th><th>Reason</th></tr></thead>
+          <thead><tr><th>Kind</th><th>Invoice</th><th>Line No</th><th>Vendor</th><th>Category</th><th>Description</th><th>Line Total</th><th>Rule</th><th>Reason</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
     }
@@ -143,22 +145,26 @@
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
           const ledgerExceptions = Array.isArray(data?.LedgerException) ? data.LedgerException : [];
+          const ledgerMatched = Array.isArray(data?.LedgerMatched) ? data.LedgerMatched : [];
+          const reviewItems = ledgerMatched.filter(x => (x.status || '').toLowerCase() === 'review');
           const invList = Array.isArray(data?.invoices) ? data.invoices
                         : (data && data.invoiceId ? [data] : []);
           const businessByInvoice = {};
           for (const inv of invList) businessByInvoice[inv.invoiceId] = inv.businessName || inv.vendorName;
-          for (const ex of ledgerExceptions) {
-            allExceptions.push({
-              invoiceId: ex.invoiceId,
-              lineNo: ex.lineNo || ex.lineItem,
-              vendorName: businessByInvoice[ex.invoiceId] || ex.businessName,
-              categoryName: ex.lineItemCategory,
-              description: ex.lineItemDescription,
-              lineTotal: ex.lineTotal,
-              reason: ex.reason
-            });
-          }
-          summary.textContent = `Loaded ${allExceptions.length} exception(s) from ${runName}.`;
+          const push = (ex, kind) => allExceptions.push({
+            invoiceId: ex.invoiceId,
+            lineNo: ex.lineNo || ex.lineItem,
+            vendorName: businessByInvoice[ex.invoiceId] || ex.businessName,
+            categoryName: ex.lineItemCategory,
+            description: ex.lineItemDescription,
+            lineTotal: ex.lineTotal,
+            ruleApplied: ex.ruleApplied,
+            kind,
+            reason: ex.reason
+          });
+          for (const ex of ledgerExceptions) push(ex, 'exception');
+          for (const ex of reviewItems) push(ex, 'review');
+          summary.textContent = `Loaded ${reviewItems.length} review and ${ledgerExceptions.length} exception item(s) from ${runName}.`;
           renderExceptions();
 
           // Load cached draft result if available.

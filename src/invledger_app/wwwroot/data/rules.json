@@ -32,13 +32,7 @@
     {
       "id": "R5",
       "name": "No ledger item match",
-      "description": "Category exists but the sub-item is not in the approved ledger item list. Sent to exception queue.",
-      "outcome": "exception"
-    },
-    {
-      "id": "R6",
-      "name": "No ledger category match",
-      "description": "Invoice category does not exist in the approved ledger. Sent to exception queue.",
+      "description": "No ledger item matches the description / business. Sent to exception queue.",
       "outcome": "exception"
     }
   ]
