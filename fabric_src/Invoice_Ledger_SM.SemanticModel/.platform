@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "Invoice_Ledger_SM"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "e61c502f-7e9a-b475-4327-d79d9bfde7c1"
+  }
+}

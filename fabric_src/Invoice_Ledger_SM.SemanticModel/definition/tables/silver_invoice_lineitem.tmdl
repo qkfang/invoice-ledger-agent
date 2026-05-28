@@ -1,0 +1,130 @@
+table silver_invoice_lineitem
+	lineageTag: e04439c0-c95d-4ce2-99b4-233c485c8897
+	sourceLineageTag: [silver].[silver_invoice_lineitem]
+
+	column invoiceId
+		dataType: string
+		lineageTag: c3d9d738-a75e-44e0-b157-6435a0ef73cd
+		sourceLineageTag: invoiceId
+		summarizeBy: none
+		sourceColumn: invoiceId
+
+		annotation SummarizationSetBy = Automatic
+
+	column run_id
+		dataType: string
+		lineageTag: 2a729d51-42b4-45ce-ac8f-aaedcbc67633
+		sourceLineageTag: run_id
+		summarizeBy: none
+		sourceColumn: run_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column ingested_at
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 65437e45-e670-4325-8aa4-29ac11d01de9
+		sourceLineageTag: ingested_at
+		summarizeBy: none
+		sourceColumn: ingested_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column vendorName
+		dataType: string
+		lineageTag: 3645b96a-9078-405f-a534-bd356fe8b624
+		sourceLineageTag: vendorName
+		summarizeBy: none
+		sourceColumn: vendorName
+
+		annotation SummarizationSetBy = Automatic
+
+	column lineNo
+		dataType: string
+		lineageTag: b17b6017-c635-4270-b1d8-b6c961bba287
+		sourceLineageTag: lineNo
+		summarizeBy: none
+		sourceColumn: lineNo
+
+		annotation SummarizationSetBy = Automatic
+
+	column categoryName
+		dataType: string
+		lineageTag: 24a79fbb-f61d-4380-9ffb-806dd815fd11
+		sourceLineageTag: categoryName
+		summarizeBy: none
+		sourceColumn: categoryName
+
+		annotation SummarizationSetBy = Automatic
+
+	column description
+		dataType: string
+		lineageTag: 8301a996-250a-4b27-89b7-613187f45fd3
+		sourceLineageTag: description
+		summarizeBy: none
+		sourceColumn: description
+
+		annotation SummarizationSetBy = Automatic
+
+	column quantity
+		dataType: double
+		lineageTag: e96121a1-e26e-4443-b447-a43fe75a83cd
+		sourceLineageTag: quantity
+		summarizeBy: sum
+		sourceColumn: quantity
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column unitPrice
+		dataType: double
+		lineageTag: 76218928-70de-470b-a5e1-c41b6ee6586d
+		sourceLineageTag: unitPrice
+		summarizeBy: sum
+		sourceColumn: unitPrice
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column lineTotal
+		dataType: double
+		lineageTag: c4d7d384-6126-423f-a7f5-b5559bc8f785
+		sourceLineageTag: lineTotal
+		summarizeBy: sum
+		sourceColumn: lineTotal
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column convertedUnitPrice
+		dataType: double
+		lineageTag: 4068119a-7f22-4294-9fc9-e415c1ad2387
+		sourceLineageTag: convertedUnitPrice
+		summarizeBy: sum
+		sourceColumn: convertedUnitPrice
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column convertedLineTotal
+		dataType: double
+		lineageTag: f803583c-9ec1-4e00-8e8d-bd6d33b4a6d9
+		sourceLineageTag: convertedLineTotal
+		summarizeBy: sum
+		sourceColumn: convertedLineTotal
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition silver_invoice_lineitem = entity
+		mode: directLake
+		source
+			entityName: silver_invoice_lineitem
+			schemaName: silver
+			expressionSource: 'DirectLake - DataStore'
+

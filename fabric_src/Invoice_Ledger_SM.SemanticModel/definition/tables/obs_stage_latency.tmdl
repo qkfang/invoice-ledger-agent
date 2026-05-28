@@ -1,0 +1,130 @@
+table obs_stage_latency
+	lineageTag: 5cd12421-f414-4d7b-81ff-0081bb078f02
+	sourceLineageTag: [obs].[obs_stage_latency]
+
+	column run_id
+		dataType: string
+		lineageTag: 68b847bc-a206-467b-a65c-5860ad8da91e
+		sourceLineageTag: run_id
+		summarizeBy: none
+		sourceColumn: run_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column ingested
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 8972e2c4-9a37-484d-8433-a26a0ae42744
+		sourceLineageTag: ingested
+		summarizeBy: none
+		sourceColumn: ingested
+
+		annotation SummarizationSetBy = Automatic
+
+	column ocr
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 7672b097-9543-45ac-a2d6-42e87bdbaf11
+		sourceLineageTag: ocr
+		summarizeBy: none
+		sourceColumn: ocr
+
+		annotation SummarizationSetBy = Automatic
+
+	column agent_input
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 55445b70-7cb5-42a5-8b18-64c863e87e9e
+		sourceLineageTag: agent_input
+		summarizeBy: none
+		sourceColumn: agent_input
+
+		annotation SummarizationSetBy = Automatic
+
+	column agent_output
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: af49bcc0-7fce-4e83-b9cb-1cc1e334fa4b
+		sourceLineageTag: agent_output
+		summarizeBy: none
+		sourceColumn: agent_output
+
+		annotation SummarizationSetBy = Automatic
+
+	column normalized
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 6f9cbd70-3784-4103-ac99-e168b58fec41
+		sourceLineageTag: normalized
+		summarizeBy: none
+		sourceColumn: normalized
+
+		annotation SummarizationSetBy = Automatic
+
+	column final
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: b05170c6-ef70-446c-989a-c413943d9cb5
+		sourceLineageTag: final
+		summarizeBy: none
+		sourceColumn: final
+
+		annotation SummarizationSetBy = Automatic
+
+	column result
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 9e6ec68b-f054-4ec2-a761-9b2cece96471
+		sourceLineageTag: result
+		summarizeBy: none
+		sourceColumn: result
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_seconds
+		dataType: int64
+		formatString: 0
+		lineageTag: 775094bb-277d-4219-976d-ea493f70459a
+		sourceLineageTag: total_seconds
+		summarizeBy: sum
+		sourceColumn: total_seconds
+
+		annotation SummarizationSetBy = Automatic
+
+	column sec_ingest_to_ocr
+		dataType: int64
+		formatString: 0
+		lineageTag: 5e1ce1a4-2b59-46e0-b4df-9d2cb0ee6799
+		sourceLineageTag: sec_ingest_to_ocr
+		summarizeBy: sum
+		sourceColumn: sec_ingest_to_ocr
+
+		annotation SummarizationSetBy = Automatic
+
+	column sec_agent_total
+		dataType: int64
+		formatString: 0
+		lineageTag: 18740505-133b-463d-904b-3948525dca02
+		sourceLineageTag: sec_agent_total
+		summarizeBy: sum
+		sourceColumn: sec_agent_total
+
+		annotation SummarizationSetBy = Automatic
+
+	column sec_normalize_to_final
+		dataType: int64
+		formatString: 0
+		lineageTag: 0cf54716-45cb-4095-ac6d-a976358d17e2
+		sourceLineageTag: sec_normalize_to_final
+		summarizeBy: sum
+		sourceColumn: sec_normalize_to_final
+
+		annotation SummarizationSetBy = Automatic
+
+	partition obs_stage_latency = entity
+		mode: directLake
+		source
+			entityName: obs_stage_latency
+			schemaName: obs
+			expressionSource: 'DirectLake - DataStore'
+
